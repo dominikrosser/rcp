@@ -1,0 +1,8 @@
+{
+  "name": "rcp-web-frontend",
+  "version": "0.0.1",
+  "main": "static/index.html",
+  "author": "dominikrosser",
+  "license": "MIT",
+  "private": true
+}
