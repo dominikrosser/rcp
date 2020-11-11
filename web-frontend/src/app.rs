@@ -1,6 +1,6 @@
 use yew::prelude::*;
 
-use super::recipe::Recipe;
+use super::recipe_list::RecipeList;
 
 pub struct App {
     link: ComponentLink<Self>,
@@ -60,8 +60,7 @@ impl Component for App {
                 { navigation_bar }
 
                 <div class="ui center aligned container">
-                    <Recipe/>
-                   { "Hello World!!!" } 
+                    <RecipeList/>
                 </div>
             </>
         }

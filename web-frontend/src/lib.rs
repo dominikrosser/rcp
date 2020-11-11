@@ -2,6 +2,7 @@
 
 mod app;
 mod recipe;
+mod recipe_list;
 
 use yew::html::{Component, ComponentLink};
 
