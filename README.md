@@ -1,7 +1,7 @@
 # rcp
 
 ## Run MongoDB docker image locally (required for api)
-`cd web-api && make mongostart'
+`cd web-api && make mongostart`
 
 ## Run Api
 `cd web-api && make dev`
