@@ -1,0 +1,39 @@
+[package]
+name = "api"
+version = "0.1.0"
+authors = ["Dominik Rosser"]
+edition = "2018"
+
+[dependencies]
+tokio = { version = "0.2.0", features = ["macros", "rt-threaded"] }
+warp = "0.2"
+serde = {version = "1.0", features = ["derive"] }
+thiserror = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+futures = { version = "0.3.4", default-features = false, features = ["async-await"] }
+mongodb = "1.1.1"
+
+[profile.dev]
+debug = 0
+
+[profile.test]
+debug = 0
+
+[profile.release]
+panic = 'abort'
+
+# https://github.com/zupzup/rust-web-mongodb-example
+
+# make mongostart
+# make dev
+
+# fetch recipes:
+# curl http://localhost:8080/recipe
+
+# create a new recipe:
+# curl -X POST http://localhost:8080/recipe -d '{"recipe_name": "good book"}' -H "content-type: application/json"
+
+# edit a recipe:
+# curl -X PUT http://localhost:8080/recipe/5f15fd5400b98edc001944c0 -d '{"name": "good book"}' -H "content-type: application/json"
+
+# curl -X DELETE http://localhost:8080/recipe/5f15fd3900789205001944bf
