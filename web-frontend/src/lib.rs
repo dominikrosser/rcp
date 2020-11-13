@@ -3,6 +3,7 @@
 mod app;
 mod recipe;
 mod recipe_list;
+mod add_recipe;
 
 use yew::html::{Component, ComponentLink};
 

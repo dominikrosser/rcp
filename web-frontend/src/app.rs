@@ -1,6 +1,7 @@
 use yew::prelude::*;
 
-use super::recipe_list::RecipeList;
+use crate::recipe_list::RecipeList;
+use crate::add_recipe::AddRecipeComp;
 
 pub struct App {
     link: ComponentLink<Self>,
@@ -61,6 +62,7 @@ impl Component for App {
 
                 <div class="ui center aligned container">
                     <RecipeList/>
+                    <AddRecipeComp/>
                 </div>
             </>
         }

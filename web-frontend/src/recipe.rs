@@ -1,31 +1,37 @@
 use yew::prelude::*;
+use serde::{Deserialize};
 
 pub struct RecipeComp {
     link: ComponentLink<Self>,
     model: Recipe,
 }
 
+#[derive(Deserialize)]
 pub struct Temperature {
     amount: f32,
     unit: TemperatureUnit,
 }
 
+#[derive(Deserialize)]
 pub enum OvenFanValue {
     Off,
     Low,
     High
 }
 
+#[derive(Deserialize)]
 pub enum TemperatureUnit {
     Celsius,
     Fahrenheit,
 }
 
+#[derive(Deserialize)]
 pub struct Amount {
     amount: f32,
     unit: String,
 }
 
+#[derive(Deserialize)]
 pub struct IngredientData {
     /* A list of dicts which describe the amounts to use. Normally, the list will only contain one dict.
      * In cases where multiple yields need to be stored (i.e. 50 cookies vs 100 cookes vs 250 cookies),
@@ -44,6 +50,7 @@ pub struct IngredientData {
 }
 
 // A dict of items, describing an ingredient, and how much of that ingredient to use.
+#[derive(Deserialize)]
 pub struct Ingredient {
 
     data: IngredientData,
@@ -53,6 +60,7 @@ pub struct Ingredient {
     substitutions: Vec<Ingredient>,
 }
 
+#[derive(Deserialize)]
 pub struct BookSource {
     /* This is a list. Refers to the author(s) of this recipe. Can be the same as source_authors, if appropriate.
      * If there was only one author, then they would be the only item in the list. */
@@ -68,6 +76,7 @@ pub struct BookSource {
     notes: Option<String>,
 }
 
+#[derive(Deserialize)]
 pub struct HACCPValue {
     /* Refers to specific HACCP guidelines relevant to this step. */
     control_point: String,
@@ -77,6 +86,7 @@ pub struct HACCPValue {
     critical_control_point: String,
 }
 
+#[derive(Deserialize)]
 pub struct Step {
     /* The only item in the dict that is absolutely required. */
     step: String,
@@ -88,6 +98,7 @@ pub struct Step {
     notes: Option<String>,
 }
 
+#[derive(Deserialize)]
 pub struct Yield {
     /* The amount, relevant to the unit. */
     amount: f32,
@@ -97,12 +108,14 @@ pub struct Yield {
 }
 
 // See Open Recipe Format
+#[derive(Deserialize)]
 pub struct Recipe {
 
+    // recipe_uuid
     recipe_uuid: String,
 
     /* The name of this recipe. */
-    recipe_name: Option<String>,
+    pub recipe_name: Option<String>,
 
     /* Setting to be used with convection oven. Possible values are “Off”, “Low” and “High”. If not specified, it is assumed to be “Off”.
      * If specified, all software should display and print this value. If not specified, it is up to the software whether or not it is displayed and/or printed,
@@ -131,23 +144,23 @@ pub struct Recipe {
 
     /* Does not refer to the person who entered the recipe; only refers to the original author of the recipe.
      * If this recipe was based on another recipe by another person, then this field should contain the name of the original author. */
-    source_authors: Vec<String>,
+    source_authors: Option<Vec<String>>,
 
     /* The URL that this recipe was copied from, if applicable. In the case of a recipe-hosting website, this may refer to the official URL at which the recipe is hosted. */
     source_url: Option<String>,
 
     /* A list, in order, of steps to be performed on the recipe. Each item in the list is a dict, as specified below. */
-    steps: Vec<Step>,
+    steps: Option<Vec<Step>>,
 
     /* Refers to how much food the recipe makes. This is a list, which will normally contain one dict.
      * In cases where multiple yields need to be stored (i.e. 50 cookies vs 100 cookes vs 250 cookies), each yield will have its own dict in this list. */
-    yields: Vec<Yield>,
+    yields: Option<Vec<Yield>>,
 }
 
 impl Recipe {
-    pub fn new() -> Self {
+    pub fn new(uid: &str) -> Self {
         Self {
-            recipe_uuid: "".into(),
+            recipe_uuid: uid.into(),
             recipe_name: None,
             oven_fan: None,
             oven_temp: None,
@@ -155,10 +168,10 @@ impl Recipe {
             ingredients: None,
             notes: None,
             source_book: None,
-            source_authors: vec![],
+            source_authors: None,
             source_url: None,
-            steps: vec![],
-            yields: vec![],
+            steps: None,
+            yields: None,
         }
     }
 }
@@ -170,7 +183,7 @@ impl Component for RecipeComp {
     type Properties = ();
 
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
-        let recipe = Recipe::new();
+        let recipe = Recipe::new("".into());
 
         Self {
             link,
