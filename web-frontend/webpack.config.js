@@ -6,12 +6,16 @@ const distPath = path.resolve(__dirname, "dist");
 module.exports = (env, argv) => {
   return {
     devServer: {
+      historyApiFallback: true,
       contentBase: distPath,
       compress: argv.mode === 'production',
-      port: 8000
+      port: 8000,
+      hot: true,
+
     },
     entry: './bootstrap.js',
     output: {
+      publicPath: '/',
       path: distPath,
       filename: "web-frontend.js",
       webassemblyModuleFilename: "web-frontend.wasm"

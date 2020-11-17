@@ -1,9 +1,12 @@
 use yew::prelude::*;
 use yew::services::fetch::{FetchService, FetchTask, Request, Response};
 use yew::callback::Callback;
+use yew::events::ChangeData;
 use yew::format::{Json, Nothing};
 use serde::Deserialize;
 use serde_json::json;
+
+use crate::recipe::RecipeRequest;
 
 pub struct AddRecipeComp {
     link: ComponentLink<Self>,
@@ -11,15 +14,21 @@ pub struct AddRecipeComp {
 }
 
 pub struct State {
+    recipe_data: RecipeRequest,
     post_recipes_task: Option<FetchTask>,
     post_response_display_msg: Option<String>,
 }
 
 impl State {
     fn new() -> Self {
+        let recipe_data: RecipeRequest = RecipeRequest {
+            recipe_name: "".to_string(),
+        };
+
         State {
             post_recipes_task: None,
             post_response_display_msg: None,
+            recipe_data: recipe_data,
         }
     }
 }
@@ -29,6 +38,7 @@ pub enum Msg {
     AddRecipe,
     ReceiveSuccessResponse,
     ReceiveErrorResponse,
+    RecipeNameInputChanged(String),
 }
 
 impl Component for AddRecipeComp {
@@ -52,7 +62,7 @@ impl Component for AddRecipeComp {
         match msg {
             Msg::Noop => { false },
             Msg::AddRecipe => {
-                let json_value: serde_json::Value = json!({"recipe_name": "NEW RECIPE"});
+                let json_value: serde_json::Value = json!({"recipe_name": &self.state.recipe_data.recipe_name });
                 let json_body = Json(&json_value);
 
                 // 1. build the request
@@ -87,13 +97,25 @@ impl Component for AddRecipeComp {
             Msg::ReceiveErrorResponse => {
                 self.state.post_response_display_msg = Some("Error".to_string());
                 true
-            }
+            },
+            Msg::RecipeNameInputChanged(recipe_name) => {
+                self.state.recipe_data.recipe_name = recipe_name;
+                true
+            },
         }
     }
 
     fn view(&self) -> Html {
+        let oninput = self.link.callback(|e: InputData| {
+            Msg::RecipeNameInputChanged(e.value)
+        });
+
         html! {<>
             <h2>{"Add Recipe"}</h2>
+            <input type="text",
+                value=&self.state.recipe_data.recipe_name,
+                oninput=self.link.callback(|e: InputData| Msg::RecipeNameInputChanged(e.value))
+                />
             { self.view_submit_recipe_button() }
         </>}
     }

@@ -1,5 +1,20 @@
 use yew::prelude::*;
-use serde::{Deserialize};
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct RecipeRequest {
+    pub recipe_name: String,
+}
+
+impl RecipeRequest {
+    pub fn valid(&self) -> bool {
+        self.recipe_name_valid()
+    }
+
+    fn recipe_name_valid(&self) -> bool {
+        self.recipe_name.chars().count() >= 4
+    }
+}
 
 pub struct RecipeComp {
     link: ComponentLink<Self>,
