@@ -39,17 +39,30 @@ async fn main() -> Result<()> {
         .and(warp::body::json())
         .and(with_db(db.clone()))
         .and_then(handler::create_recipe_handler)
+
+        // PUT "recipe/{id}"
         .or(recipe
             .and(warp::put())
             .and(warp::path::param())
             .and(warp::body::json())
             .and(with_db(db.clone()))
             .and_then(handler::edit_recipe_handler))
+
+        // DELETE "recipe/{id}"
         .or(recipe
             .and(warp::delete())
             .and(warp::path::param())
             .and(with_db(db.clone()))
             .and_then(handler::delete_recipe_handler))
+        
+        // GET "recipe/{id}"
+        .or(recipe
+            .and(warp::get())
+            .and(warp::path::param())
+            .and(with_db(db.clone()))
+            .and_then(handler::recipe_handler))
+
+        // GET "/recipe"
         .or(recipe
             .and(warp::get())
             .and(with_db(db.clone()))

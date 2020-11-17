@@ -14,7 +14,12 @@
 ## Api example requests
 
 ### fetch recipes:
+
+All recipes:
 `curl http://localhost:8080/recipe`
+
+With id:
+`curl -X GET http://localhost:8080/recipe/5f15fd5400b98edc001944c0`
 
 ### create a new recipe:
 `curl -X POST http://localhost:8080/recipe -d '{"recipe_name": "good book"}' -H "content-type: application/json"`
