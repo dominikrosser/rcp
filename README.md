@@ -19,7 +19,7 @@ All recipes:
 `curl http://localhost:8080/recipe`
 
 With id:
-`curl -X GET http://localhost:8080/recipe/5f15fd5400b98edc001944c0`
+`curl -X GET http://localhost:8080/recipe/5fad75980046a9e300522b24`
 
 ### create a new recipe:
 `curl -X POST http://localhost:8080/recipe -d '{"recipe_name": "good book"}' -H "content-type: application/json"`

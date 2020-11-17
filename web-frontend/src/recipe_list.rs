@@ -27,9 +27,12 @@ impl Component for RecipeList {
     type Properties = ();
 
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
+
+        let task = RecipeList::build_fetch_recipe_task(&link);
+
         let state = State {
             recipes: None,// Some(State::dummies(500)),
-            fetch_recipes_task: None,
+            fetch_recipes_task: Some(task),
             fetch_error_msg: None,
         };
 
@@ -47,21 +50,7 @@ impl Component for RecipeList {
         match msg {
             Msg::GetRecipes => {
 
-                // 1. build the request
-                let request = Request::get("http://localhost:8080/recipe")
-                    .body(Nothing)
-                    .expect("Could not build request.");
-
-                // 2. construct a callback
-                let callback =
-                    self.link
-                        .callback(|response: Response<Json<Result<Vec<Recipe>, anyhow::Error>>>| {
-                            let Json(data) = response.into_body();
-                            Msg::ReceiveFetchRecipesResponse(data)
-                        });
-                
-                // 3. pass the request and callback to the fetch service
-                let task = FetchService::fetch(request, callback).expect("failed to start request");
+                let task = RecipeList::build_fetch_recipe_task(&self.link);
 
                 // 4. store the task so it isn't canceled immediately
                 self.state.fetch_recipes_task = Some(task);
@@ -93,29 +82,34 @@ impl Component for RecipeList {
             { self.view_fetch_recipes_button() }
             { self.view_fetching() }
             { self.view_recipe_list() }
-            // <h2>{"Recipe List"}</h2>
-            // <table class="ui celled padded table">
-            //     <thead>
-            //         <tr>
-            //             <th class="single line">{"Recipe Name"}</th>
-            //         </tr>
-            //     </thead>
-            //     <tbody>
-            //         {
-            //             self.view_recipe_list()
-            //             // for self.state.recipes
-            //             //     .iter()
-            //             //     .enumerate()
-            //             //     .map(|entry| self.view_entry(entry))
-            //         }
-            //     </tbody>
-            // </table>
             { self.view_error() }
         </>}
     }
 }
 
 impl RecipeList {
+
+    fn build_fetch_recipe_task(link: &ComponentLink<Self>) -> FetchTask {
+
+        // 1. build the request
+        let request = Request::get("http://localhost:8080/recipe")
+        .body(Nothing)
+        .expect("Could not build request.");
+
+        // 2. construct a callback
+        let callback =
+            link
+                .callback(|response: Response<Json<Result<Vec<Recipe>, anyhow::Error>>>| {
+                    let Json(data) = response.into_body();
+                    Msg::ReceiveFetchRecipesResponse(data)
+                });
+        
+        // 3. pass the request and callback to the fetch service
+        let task = FetchService::fetch(request, callback).expect("failed to start request");
+
+        task
+    }
+
     fn view_fetch_recipes_button(&self) -> Html {
         html! {
             <button onclick=self.link.callback(|_| Msg::GetRecipes)>
@@ -157,14 +151,17 @@ impl RecipeList {
     fn view_entry(&self, (idx, recipe): (usize, &Recipe)) -> Html {
         html!{
             <tr>
+                
                 <td>
-                    {
-                        if let Some(ref name) = recipe.recipe_name {
-                            name.clone()
-                        } else {
-                            "".to_string()
+                    <a href={format!("/recipes/{}", &recipe.recipe_uuid)}>
+                        {
+                            if let Some(ref name) = recipe.recipe_name {
+                                name.clone()
+                            } else {
+                                "".to_string()
+                            }
                         }
-                    }
+                    </a>
                 </td>
             </tr>
         }

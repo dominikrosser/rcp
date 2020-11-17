@@ -1,7 +1,6 @@
 use crate::{error::Error::*, handler::RecipeRequest, Recipe, Result};
-use chrono::prelude::*;
 use futures::StreamExt;
-use mongodb::bson::{doc, document::Document, oid::ObjectId, Bson};
+use mongodb::bson::{doc, document::Document, oid::ObjectId};
 use mongodb::{options::ClientOptions, Client, Collection};
 
 const DB_NAME: &str = "rcp_db";
@@ -40,7 +39,11 @@ impl DB {
     }
 
     pub async fn fetch_recipe(&self, id: &str) -> Result<Recipe> {
-        let filter = None; // todo
+
+        let oid = ObjectId::with_string(id).map_err(|_| InvalidIDError(id.to_owned()))?;
+        let filter = doc! {
+            RECIPE_UUID: oid,
+        };
         let options = None; //todo
 
         let doc = self
@@ -113,3 +116,23 @@ impl DB {
         Ok(recipe)
     }
 }
+
+
+/* FILTER EXAMPLE */
+// let filter = doc! { "author": "George Orwell" };
+// let find_options = FindOptions::builder().sort(doc! { "title": 1 }).build();
+// let mut cursor = collection.find(filter, find_options).await?;
+
+// // Iterate over the results of the cursor.
+// while let Some(result) = cursor.next().await {
+//     match result {
+//         Ok(document) => {
+//             if let Some(title) = document.get("title").and_then(Bson::as_str) {
+//                 println!("title: {}", title);
+//             }  else {
+//                 println!("no title found");
+//             }
+//         }
+//         Err(e) => return Err(e.into()),
+//     }
+// }

@@ -3,16 +3,20 @@ use yew_router::prelude::*;
 
 use crate::recipe_list::RecipeList;
 use crate::add_recipe::AddRecipeComp;
+use crate::recipe::RecipeComp;
 
 pub struct App {
     link: ComponentLink<Self>,
 }
 
-#[derive(Switch, Debug, Clone)]
+#[derive(Switch, Debug, Clone, PartialEq)]
 pub enum RecipesRoute {
 
     #[to="/add"]
     AddRecipe,
+
+    #[to="/{id}"]
+    ViewRecipe { id: String },
 
     #[to=""]
     AllRecipes,
@@ -83,6 +87,9 @@ impl App {
                     RecipesRoute::AllRecipes => html!{<>
                         <RecipeList />
                     </>},
+                    RecipesRoute::ViewRecipe { id } => html!{<>
+                        <RecipeComp recipe_uuid=id />
+                    </>}
                 }
             },
             AppRoute::Home => html!{<>

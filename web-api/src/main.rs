@@ -1,9 +1,7 @@
-use chrono::prelude::*;
 use db::DB;
 use serde::{Deserialize, Serialize};
 use std::convert::Infallible;
-use warp::{Filter, Rejection};
-use warp::http::Method;
+use warp::{Filter, http::Method, Rejection};
 use warp::http::header::HeaderName;
 
 type Result<T> = std::result::Result<T, error::Error>;
