@@ -78,8 +78,7 @@ impl App {
             AppRoute::Recipes(recipes_route) => {
                 match recipes_route {
                     RecipesRoute::AddRecipe => html!{<>
-                        { " ADD "}
-                        // <AddRecipeComp />
+                        <AddRecipeComp />
                     </>},
                     RecipesRoute::AllRecipes => html!{<>
                         <RecipeList />

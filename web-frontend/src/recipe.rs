@@ -1,9 +1,10 @@
 use yew::prelude::*;
 use serde::{Deserialize, Serialize};
 
+// Struct for making add recipe requests
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RecipeRequest {
-    pub recipe_name: String,
+    pub recipe_name: Option<String>, 
 }
 
 impl RecipeRequest {
@@ -12,13 +13,11 @@ impl RecipeRequest {
     }
 
     fn recipe_name_valid(&self) -> bool {
-        self.recipe_name.chars().count() >= 4
+        match &self.recipe_name {
+            None => false,
+            Some(name) => name.chars().count() >= 4,
+        }
     }
-}
-
-pub struct RecipeComp {
-    link: ComponentLink<Self>,
-    model: Recipe,
 }
 
 #[derive(Deserialize)]
@@ -193,6 +192,11 @@ impl Recipe {
 
 pub enum Msg {}
 
+pub struct RecipeComp {
+    link: ComponentLink<Self>,
+    model: Recipe,
+}
+
 impl Component for RecipeComp {
     type Message = Msg;
     type Properties = ();
@@ -216,8 +220,14 @@ impl Component for RecipeComp {
     }
 
     fn view(&self) -> Html {
-        html! {
+        html! {<>
             <h2>{"Recipe"}</h2>
-        }
+
+            <h3>{"Name"}</h3>
+            <p>{ match &self.model.recipe_name {
+                Some(name) => name,
+                None => "",
+            }}</p>
+        </>}
     }
 }

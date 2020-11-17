@@ -12,6 +12,11 @@ pub async fn recipes_list_handler(db: DB) -> WebResult<impl Reply> {
     Ok(json(&recipes))
 }
 
+pub async fn recipe_handler(id: String, db: DB) -> WebResult<impl Reply> {
+    let recipe = db.fetch_recipe(&id).await.map_err(|e| reject::custom(e))?;
+    Ok(json(&recipe))
+}
+
 pub async fn create_recipe_handler(body: RecipeRequest, db: DB) -> WebResult<impl Reply> {
     db.create_recipe(&body).await.map_err(|e| reject::custom(e))?;
     Ok(StatusCode::CREATED)

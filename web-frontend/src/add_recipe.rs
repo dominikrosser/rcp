@@ -22,7 +22,7 @@ pub struct State {
 impl State {
     fn new() -> Self {
         let recipe_data: RecipeRequest = RecipeRequest {
-            recipe_name: "".to_string(),
+            recipe_name: None,
         };
 
         State {
@@ -99,7 +99,7 @@ impl Component for AddRecipeComp {
                 true
             },
             Msg::RecipeNameInputChanged(recipe_name) => {
-                self.state.recipe_data.recipe_name = recipe_name;
+                self.state.recipe_data.recipe_name = Some(recipe_name);
                 true
             },
         }
@@ -113,7 +113,10 @@ impl Component for AddRecipeComp {
         html! {<>
             <h2>{"Add Recipe"}</h2>
             <input type="text",
-                value=&self.state.recipe_data.recipe_name,
+                value=match &self.state.recipe_data.recipe_name {
+                    None => "",
+                    Some(name) => name,
+                },
                 oninput=self.link.callback(|e: InputData| Msg::RecipeNameInputChanged(e.value))
                 />
             { self.view_submit_recipe_button() }

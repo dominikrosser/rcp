@@ -39,6 +39,24 @@ impl DB {
         Ok(result)
     }
 
+    pub async fn fetch_recipe(&self, id: &str) -> Result<Recipe> {
+        let filter = None; // todo
+        let options = None; //todo
+
+        let doc = self
+            .get_recipe_collection()
+            .find_one(filter, options)
+            .await
+            .map_err(MongoQueryError)?;
+        
+        if let Some(doc) = doc {
+            self.doc_to_recipe(&doc)
+        } else {
+            Err(InvalidIDError(id.to_string()))
+        }
+        
+    }
+
     pub async fn create_recipe(&self, entry: &RecipeRequest) -> Result<()> {
         let doc = doc! {
             RECIPE_NAME: entry.recipe_name.clone(),

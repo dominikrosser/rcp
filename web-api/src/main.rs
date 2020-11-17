@@ -19,6 +19,15 @@ pub struct Recipe {
     pub recipe_name: String,
 }
 
+impl Recipe {
+    pub fn new() -> Self {
+        Self {
+            recipe_uuid: "".to_string(),
+            recipe_name: "".to_string(),
+        }
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let db = DB::init().await?;
