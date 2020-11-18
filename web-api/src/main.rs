@@ -14,7 +14,16 @@ mod handler;
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Recipe {
     pub recipe_uuid: String,
+
+    /* The name of this recipe. */
     pub recipe_name: String,
+
+    /* How long the dish should spend in the oven.
+     * This is an overall value, which refers to the recipe as a whole. If multiple oven times are used, they should be specified in the recipe. */
+    oven_time: Option<f64>,
+
+     /* This is a field that will appear in several locations. The recipe itself may have notes, each ingredient may have notes, and each step may have notes. */
+    notes: Option<String>,
 }
 
 impl Recipe {
@@ -22,6 +31,8 @@ impl Recipe {
         Self {
             recipe_uuid: "".to_string(),
             recipe_name: "".to_string(),
+            oven_time: None,
+            notes: None,
         }
     }
 }

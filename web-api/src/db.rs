@@ -1,6 +1,6 @@
 use crate::{error::Error::*, handler::RecipeRequest, Recipe, Result};
 use futures::StreamExt;
-use mongodb::bson::{doc, document::Document, oid::ObjectId};
+use mongodb::bson::{doc, document::Document, oid::ObjectId, Bson};
 use mongodb::{options::ClientOptions, Client, Collection};
 use mongodb::results::{InsertOneResult, UpdateResult, DeleteResult};
 
@@ -9,6 +9,8 @@ const RECIPE_COLL: &str = "recipe";
 
 const RECIPE_UUID: &str = "_id";
 const RECIPE_NAME: &str = "recipe_name";
+const OVEN_TIME: &str = "oven_time";
+const NOTES: &str = "notes";
 
 #[derive(Clone, Debug)]
 pub struct DB {
@@ -62,9 +64,8 @@ impl DB {
     }
 
     pub async fn create_recipe(&self, entry: &RecipeRequest) -> Result<String> {
-        let doc: Document = doc! {
-            RECIPE_NAME: entry.recipe_name.clone(),
-        };
+
+        let doc = self.doc_from_recipe_request(&entry);
 
         let _result: InsertOneResult = self.get_recipe_collection()
             .insert_one(doc, None)
@@ -88,9 +89,8 @@ impl DB {
         let query: Document = doc! {
             RECIPE_UUID: oid,
         };
-        let doc: Document = doc! {
-            RECIPE_NAME: entry.recipe_name.clone(),
-        };
+
+        let doc = self.doc_from_recipe_request(&entry);
 
         let _result: UpdateResult =
             self.get_recipe_collection()
@@ -119,13 +119,46 @@ impl DB {
         self.client.database(DB_NAME).collection(RECIPE_COLL)
     }
 
+    fn doc_from_recipe_request(&self, recipe_request: &RecipeRequest) -> Document {
+
+        let oven_time: Bson = match recipe_request.oven_time {
+            Some(t) => Bson::Double(t),
+            None => Bson::Null,
+        };
+
+        let notes: Bson = match &recipe_request.notes {
+            Some(s) => Bson::String(s.clone()),
+            None => Bson::Null,
+        };
+
+        let doc: Document = doc! {
+            RECIPE_NAME: recipe_request.recipe_name.clone(),
+            OVEN_TIME: oven_time,
+            NOTES: notes,
+        };
+
+        doc
+    }
+
     fn doc_to_recipe(&self, doc: &Document) -> Result<Recipe> {
+
         let recipe_uuid: &ObjectId = doc.get_object_id(RECIPE_UUID)?;
+
         let recipe_name: &str = doc.get_str(RECIPE_NAME)?;
+
+        let oven_time: Option<f64> = doc.get(OVEN_TIME).and_then(mongodb::bson::Bson::as_f64);
+
+        let notes: Option<String> = match doc.get(NOTES).and_then(Bson::as_str) {
+            Some(s) => Some(s.to_owned()),
+            None => None,
+        };
+        
 
         let recipe = Recipe {
             recipe_uuid: recipe_uuid.to_hex(),
             recipe_name: recipe_name.to_owned(),
+            oven_time: oven_time,
+            notes: notes,
         };
         Ok(recipe)
     }

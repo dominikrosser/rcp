@@ -5,6 +5,8 @@ use warp::{http::StatusCode, reject, reply::json, Reply};
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RecipeRequest {
     pub recipe_name: String,
+    pub oven_time: Option<f64>,
+    pub notes: Option<String>,
 }
 
 pub async fn recipes_list_handler(db: DB) -> WebResult<impl Reply> {

@@ -35,6 +35,8 @@ impl State {
     fn new() -> Self {
         let recipe_data: RecipeRequest = RecipeRequest {
             recipe_name: None,
+            oven_time: None,
+            notes: None,
         };
 
         State {
@@ -49,7 +51,10 @@ pub enum Msg {
     Noop,
     AddRecipe,
     ReceivePostResponse(Result<CreateRecipeResponse, anyhow::Error>),
+
     RecipeNameInputChanged(String),
+    RecipeOvenTimeInputChanged(String),
+    RecipeNotesInputChanged(String),
 }
 
 impl Component for AddRecipeComp {
@@ -108,8 +113,18 @@ impl Component for AddRecipeComp {
 
                 true
             },
+
             Msg::RecipeNameInputChanged(recipe_name) => {
                 self.state.recipe_data.recipe_name = Some(recipe_name);
+                true
+            },
+            Msg::RecipeOvenTimeInputChanged(oven_time) => {
+                let oven_time: f64 = oven_time.parse::<f64>().unwrap();
+                self.state.recipe_data.oven_time = Some(oven_time);
+                true
+            },
+            Msg::RecipeNotesInputChanged(notes) => {
+                self.state.recipe_data.notes = Some(notes);
                 true
             },
         }
@@ -144,6 +159,29 @@ impl Component for AddRecipeComp {
                     },
                     oninput=self.link.callback(|e: InputData| Msg::RecipeNameInputChanged(e.value))
                     />
+
+                <label for="oven_time_input">{"oven_time: "}</label>
+                <input
+                    type="number"
+                    id="oven_time_input"
+                    value=match &self.state.recipe_data.oven_time {
+                        None => "".to_string(),
+                        Some(t) => t.to_string(),
+                    },
+                    oninput=self.link.callback(|e: InputData| Msg::RecipeOvenTimeInputChanged(e.value))
+                    />
+
+                <label for="notes_input">{"notes: "}</label>
+                <input
+                    type="text",
+                    id="notes_input",
+                    value=match &self.state.recipe_data.notes {
+                        None => "",
+                        Some(s) => s,
+                    },
+                    oninput=self.link.callback(|e: InputData| Msg::RecipeNotesInputChanged(e.value))
+                    />
+                
                 { self.view_submit_recipe_button() }
             </>}
         }
@@ -153,8 +191,9 @@ impl Component for AddRecipeComp {
 impl AddRecipeComp {
 
     fn build_fetch_recipe_task(&self) -> FetchTask {
-        let json_value: serde_json::Value = json!({"recipe_name": &self.state.recipe_data.recipe_name });
-        let json_body = Json(&json_value);
+        // let json_value: serde_json::Value = json!({"recipe_name": &self.state.recipe_data.recipe_name });
+        // let json_body = Json(&json_value);
+        let json_body = Json(&self.state.recipe_data);
 
         // 1. build the request
         let post_request = Request::post("http://localhost:8080/recipe")

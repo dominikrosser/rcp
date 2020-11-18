@@ -8,6 +8,8 @@ use yew::format::{Json, Nothing};
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RecipeRequest {
     pub recipe_name: Option<String>, 
+    pub oven_time: Option<f64>,
+    pub notes: Option<String>
 }
 
 impl RecipeRequest {
@@ -23,32 +25,32 @@ impl RecipeRequest {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct Temperature {
     amount: f32,
     unit: TemperatureUnit,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub enum OvenFanValue {
     Off,
     Low,
     High
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub enum TemperatureUnit {
     Celsius,
     Fahrenheit,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct Amount {
     amount: f32,
     unit: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct IngredientData {
     /* A list of dicts which describe the amounts to use. Normally, the list will only contain one dict.
      * In cases where multiple yields need to be stored (i.e. 50 cookies vs 100 cookes vs 250 cookies),
@@ -67,7 +69,7 @@ pub struct IngredientData {
 }
 
 // A dict of items, describing an ingredient, and how much of that ingredient to use.
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct Ingredient {
 
     data: IngredientData,
@@ -77,7 +79,7 @@ pub struct Ingredient {
     substitutions: Vec<Ingredient>,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct BookSource {
     /* This is a list. Refers to the author(s) of this recipe. Can be the same as source_authors, if appropriate.
      * If there was only one author, then they would be the only item in the list. */
@@ -93,7 +95,7 @@ pub struct BookSource {
     notes: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct HACCPValue {
     /* Refers to specific HACCP guidelines relevant to this step. */
     control_point: String,
@@ -103,7 +105,7 @@ pub struct HACCPValue {
     critical_control_point: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct Step {
     /* The only item in the dict that is absolutely required. */
     step: String,
@@ -115,7 +117,7 @@ pub struct Step {
     notes: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct Yield {
     /* The amount, relevant to the unit. */
     amount: f32,
@@ -125,7 +127,7 @@ pub struct Yield {
 }
 
 // See Open Recipe Format
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct Recipe {
 
     // recipe_uuid
@@ -144,14 +146,14 @@ pub struct Recipe {
 
     /* How long the dish should spend in the oven.
      * This is an overall value, which refers to the recipe as a whole. If multiple oven times are used, they should be specified in the recipe. */
-    oven_time: Option<f32>,
+    oven_time: Option<f64>,
 
     /* A list of dicts, defining which food items are to be added to the recipe. These items should be listed in the order in which they are to be used.
      * Bearing this in mind, a particular item may be listed multiple times, if it is to be used multiple times and/or at different quantities in a recipe.
      * To be clear, it is preferable to list “1 1/2 cups of sugar” and then “1/2 cup of sugar” (as specified below) than to list “2 cups sugar, divided”. */
     ingredients: Option<Vec<Ingredient>>,
 
-    /* This is a field that will appear in several locations. The recipe itself may have noted, each ingredient may have notes, and each step may have notes. */
+    /* This is a field that will appear in several locations. The recipe itself may have notes, each ingredient may have notes, and each step may have notes. */
     notes: Option<String>,
 
     /* If this recipe was originally pulled from a book, then the book information should go here.
@@ -276,6 +278,18 @@ impl Component for RecipeComp {
             <p>{ match &self.model.recipe_name {
                 Some(name) => name,
                 None => "",
+            }}</p>
+
+            <h3>{"oven_time"}</h3>
+            <p>{ match &self.model.oven_time {
+                Some(t) => t.to_string(),
+                None => "Null".to_string(),
+            }}</p>
+
+            <h3>{"notes"}</h3>
+            <p>{ match &self.model.notes {
+                Some(s) => s.clone(),
+                None => "Null".to_string(),
             }}</p>
         </>}
     }
