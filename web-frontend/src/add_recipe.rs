@@ -3,7 +3,7 @@ use yew::services::fetch::{FetchService, FetchTask, Request, Response};
 use yew::callback::Callback;
 use yew::events::ChangeData;
 use yew::format::{Json, Nothing};
-use serde::Deserialize;
+use serde::{Serialize, Deserialize};
 use serde_json::json;
 use yew_router::{route::Route, service::RouteService, Switch};
 use yew::agent::{Dispatched, Dispatcher};
@@ -12,6 +12,12 @@ use crate::recipe::RecipeRequest;
 use crate::app::RouteType;
 use crate::app::RouteServiceType;
 use crate::reroute_agent::{RerouteAgent, RerouteRequestMsg};
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct CreateRecipeResponse {
+    pub status: u16,
+    pub recipe_uuid: String,
+}
 
 pub struct AddRecipeComp {
     link: ComponentLink<Self>,
@@ -42,8 +48,7 @@ impl State {
 pub enum Msg {
     Noop,
     AddRecipe,
-    ReceiveSuccessResponse,
-    ReceiveErrorResponse,
+    ReceivePostResponse(Result<CreateRecipeResponse, anyhow::Error>),
     RecipeNameInputChanged(String),
 }
 
@@ -77,7 +82,7 @@ impl Component for AddRecipeComp {
 
                 true
             },
-            Msg::ReceiveSuccessResponse => {
+            Msg::ReceivePostResponse(data) => {
                 self.state.post_response_display_msg = Some("Successfully added recipe".to_string());
 
                 // let route_string = format!("/recipe/");
@@ -91,14 +96,16 @@ impl Component for AddRecipeComp {
                 
                 self.state.recipe_data.recipe_name = None;
                 self.state.post_recipes_task = None;
+                
+                match data {
+                    Ok(recipe_response) => {
+                        let new_route = format!("/recipes/{}", recipe_response.recipe_uuid);
+                        self.reroute_agent
+                            .send(RerouteRequestMsg::Reroute(new_route));
+                    },
+                    Err(err) => {}
+                }
 
-                self.reroute_agent
-                    .send(RerouteRequestMsg::Reroute("/recipes/".to_owned()));
-
-                true
-            },
-            Msg::ReceiveErrorResponse => {
-                self.state.post_response_display_msg = Some("Error".to_string());
                 true
             },
             Msg::RecipeNameInputChanged(recipe_name) => {
@@ -158,12 +165,9 @@ impl AddRecipeComp {
         // 2. construct a callback
         let callback =
             self.link
-                .callback(|response: Response<Result<String, anyhow::Error>>| {
-                    if response.status().is_success() {
-                        Msg::ReceiveSuccessResponse
-                    } else {
-                        Msg::ReceiveErrorResponse
-                    }
+                .callback(|response: Response<Json<Result<CreateRecipeResponse, anyhow::Error>>>| {
+                    let Json(data) = response.into_body();
+                    Msg::ReceivePostResponse(data)
                 });
         
         // 3. pass the request and callback to the fetch service

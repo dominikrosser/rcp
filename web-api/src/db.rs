@@ -2,6 +2,7 @@ use crate::{error::Error::*, handler::RecipeRequest, Recipe, Result};
 use futures::StreamExt;
 use mongodb::bson::{doc, document::Document, oid::ObjectId};
 use mongodb::{options::ClientOptions, Client, Collection};
+use mongodb::results::{InsertOneResult, UpdateResult, DeleteResult};
 
 const DB_NAME: &str = "rcp_db";
 const RECIPE_COLL: &str = "recipe";
@@ -40,8 +41,8 @@ impl DB {
 
     pub async fn fetch_recipe(&self, id: &str) -> Result<Recipe> {
 
-        let oid = ObjectId::with_string(id).map_err(|_| InvalidIDError(id.to_owned()))?;
-        let filter = doc! {
+        let oid: ObjectId = ObjectId::with_string(id).map_err(|_| InvalidIDError(id.to_owned()))?;
+        let filter: Document = doc! {
             RECIPE_UUID: oid,
         };
         let options = None; //todo
@@ -60,44 +61,57 @@ impl DB {
         
     }
 
-    pub async fn create_recipe(&self, entry: &RecipeRequest) -> Result<()> {
-        let doc = doc! {
+    pub async fn create_recipe(&self, entry: &RecipeRequest) -> Result<String> {
+        let doc: Document = doc! {
             RECIPE_NAME: entry.recipe_name.clone(),
         };
 
-        self.get_recipe_collection()
+        let _result: InsertOneResult = self.get_recipe_collection()
             .insert_one(doc, None)
             .await
             .map_err(MongoQueryError)?;
-        Ok(())
+
+        //let _id = _result.inserted_id.to_string();
+        let oid  =
+            match _result.inserted_id {
+                mongodb::bson::Bson::ObjectId(oid) => oid,
+                _ => panic!("_id is not an ObjectId!"),
+            };
+
+        let recipe_uuid = oid.to_hex();
+
+        Ok(recipe_uuid)
     }
 
     pub async fn edit_recipe(&self, id: &str, entry: &RecipeRequest) -> Result<()> {
-        let oid = ObjectId::with_string(id).map_err(|_| InvalidIDError(id.to_owned()))?;
-        let query = doc! {
+        let oid: ObjectId = ObjectId::with_string(id).map_err(|_| InvalidIDError(id.to_owned()))?;
+        let query: Document = doc! {
             RECIPE_UUID: oid,
         };
-        let doc = doc! {
+        let doc: Document = doc! {
             RECIPE_NAME: entry.recipe_name.clone(),
         };
 
-        self.get_recipe_collection()
-            .update_one(query, doc, None)
-            .await
-            .map_err(MongoQueryError)?;
+        let _result: UpdateResult =
+            self.get_recipe_collection()
+                .update_one(query, doc, None)
+                .await
+                .map_err(MongoQueryError)?;
+
         Ok(())
     }
 
     pub async fn delete_recipe(&self, id: &str) -> Result<()> {
-        let oid = ObjectId::with_string(id).map_err(|_| InvalidIDError(id.to_owned()))?;
-        let filter = doc! {
+        let oid: ObjectId = ObjectId::with_string(id).map_err(|_| InvalidIDError(id.to_owned()))?;
+        let filter: Document = doc! {
             RECIPE_UUID: oid,
         };
 
-        self.get_recipe_collection()
-            .delete_one(filter, None)
-            .await
-            .map_err(MongoQueryError)?;
+        let _result: DeleteResult =
+            self.get_recipe_collection()
+                .delete_one(filter, None)
+                .await
+                .map_err(MongoQueryError)?;
         Ok(())
     }
 
@@ -106,8 +120,8 @@ impl DB {
     }
 
     fn doc_to_recipe(&self, doc: &Document) -> Result<Recipe> {
-        let recipe_uuid = doc.get_object_id(RECIPE_UUID)?;
-        let recipe_name = doc.get_str(RECIPE_NAME)?;
+        let recipe_uuid: &ObjectId = doc.get_object_id(RECIPE_UUID)?;
+        let recipe_name: &str = doc.get_str(RECIPE_NAME)?;
 
         let recipe = Recipe {
             recipe_uuid: recipe_uuid.to_hex(),

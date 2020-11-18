@@ -17,9 +17,22 @@ pub async fn recipe_handler(id: String, db: DB) -> WebResult<impl Reply> {
     Ok(json(&recipe))
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct CreateRecipeResponse {
+    pub status: u16,
+    pub recipe_uuid: String,
+}
+
 pub async fn create_recipe_handler(body: RecipeRequest, db: DB) -> WebResult<impl Reply> {
-    db.create_recipe(&body).await.map_err(|e| reject::custom(e))?;
-    Ok(StatusCode::CREATED)
+    let _id = db.create_recipe(&body).await.map_err(|e| reject::custom(e))?;
+
+    let response = CreateRecipeResponse {
+        status: StatusCode::CREATED.as_u16(),
+        recipe_uuid: _id,
+    };
+    let json = json(&response);
+
+    Ok(json)
 }
 
 pub async fn edit_recipe_handler(id: String, body: RecipeRequest, db: DB) -> WebResult<impl Reply> {
