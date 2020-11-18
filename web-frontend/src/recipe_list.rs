@@ -31,7 +31,7 @@ impl Component for RecipeList {
         let task = RecipeList::build_fetch_recipe_task(&link);
 
         let state = State {
-            recipes: None,// Some(State::dummies(500)),
+            recipes: None,
             fetch_recipes_task: Some(task),
             fetch_error_msg: None,
         };
@@ -63,7 +63,7 @@ impl Component for RecipeList {
                 match response {
                     Ok(recipes) => {
                         self.state.recipes = Some(recipes);
-                        self.state.fetch_error_msg = Some("".to_string());
+                        self.state.fetch_error_msg = None;
                     }
                     Err(error) => {
                         self.state.fetch_error_msg = Some(error.to_string());
@@ -111,11 +111,13 @@ impl RecipeList {
     }
 
     fn view_fetch_recipes_button(&self) -> Html {
-        html! {
-            <button onclick=self.link.callback(|_| Msg::GetRecipes)>
-                { "Fetch Recipes" }
-            </button>
-        }
+        if self.state.fetch_error_msg.is_some() && self.state.fetch_recipes_task.is_none() {
+            html! {
+                <button onclick=self.link.callback(|_| Msg::GetRecipes)>
+                    { "Try again to load" }
+                </button>
+            }
+        } else { html!{} }
     }
 
     fn view_recipe_list(&self) -> Html {
@@ -144,7 +146,7 @@ impl RecipeList {
             recipe_list_html
 
         } else {
-            html! { "Please fetch recipes" }
+            html! { }
         }
     }
 
@@ -169,14 +171,18 @@ impl RecipeList {
 
     fn view_fetching(&self) -> Html {
         if self.state.fetch_recipes_task.is_some() {
-            html! { <p>{ "Fetching data..." }</p> }
+            html! { 
+                <div class="ui medium text loader active">{ "Loading data..."}</div>
+            }
         } else {
-            html! { <p></p> }
+            html! {}
         }
     }
 
     fn view_error(&self) -> Html {
-        if let Some(ref error) = self.state.fetch_error_msg {
+        if self.state.fetch_recipes_task.is_some() {
+            html!{}
+        } else if let Some(ref error) = self.state.fetch_error_msg {
             html! { <p>{ error.clone() }</p> }
         } else {
             html! {}

@@ -1,12 +1,21 @@
 use yew::prelude::*;
 use yew_router::prelude::*;
+use yew_router::{route::Route, service::RouteService, Switch};
 
 use crate::recipe_list::RecipeList;
 use crate::add_recipe::AddRecipeComp;
 use crate::recipe::RecipeComp;
+use crate::reroute_agent::RerouteAgent;
+
+pub type RouterStateType = ();
+pub type RouteType = Route<RouterStateType>;
+pub type RouteServiceType = RouteService<RouterStateType>;
 
 pub struct App {
     link: ComponentLink<Self>,
+    route_service: RouteServiceType,
+    _reroute_agent_bridge: Box<dyn Bridge<RerouteAgent>>,
+    route: RouteType,
 }
 
 #[derive(Switch, Debug, Clone, PartialEq)]
@@ -37,15 +46,30 @@ pub enum AppRoute {
     Home,
 }
 
-pub enum Msg {}
+pub enum Msg {
+    ChangeRoute(String),
+    RouteChange(RouteType)
+}
 
 impl Component for App {
     type Message = Msg;
     type Properties = ();
 
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
+
+        let mut route_service: RouteService<()> = RouteService::new();
+        let raw_route = route_service.get_route();
+        let route = Route::from(raw_route);
+
+        let callback = link.callback(|r| Msg::RouteChange(r));
+        route_service.register_callback(callback);
+        let rab = RerouteAgent::bridge(link.callback(|r: String| Msg::ChangeRoute(r)));
+
         App {
             link,
+            route_service,
+            _reroute_agent_bridge: rab,
+            route,
         }
     }
 
@@ -55,28 +79,56 @@ impl Component for App {
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
+            Msg::ChangeRoute(route_string) => {
+
+                self.route_service.set_route(&route_string, ());
+                let raw_route = self.route_service.get_route();
+                let route = Route::from(raw_route);
+                self.route = route;
+                // TODO
+
+                true
+            },
+            Msg::RouteChange(r) => {
+                let raw_route = self.route_service.get_route();
+                self.route = Route::from(raw_route);
+                true
+            },
         }
     }
 
     fn view(&self) -> Html {
-        html! {
-            <>                
-                    <Router<AppRoute, ()>
-                        render = Router::render(|switch: AppRoute| {html!{<>
+        let switch = AppRoute::switch(self.route.clone());
+        
+        if let Some(switch) = switch {
+            html! {
+                <>                
+                    // <Router<AppRoute, RouterStateType>
+                    // render = Router::render(|switch: AppRoute| {html!{<>
                             
-                            { App::navigation_bar(&switch) }
+                            { self.navigation_bar(&switch) }
                             <div class="ui center aligned container">
                                 { App::content_view(&switch) }
                             </div>
-
-                        </>}})
-                    />
-            </>
+    
+                        // </>}})
+                    // />
+                </>
+            }
+        } else {
+            html!{ {"404"} }
         }
     }
 }
 
 impl App {
+    fn change_route(&self, route: String) -> Callback<MouseEvent> {
+        self.link.callback(move |_| {
+            let route = route.clone();
+            Msg::ChangeRoute(route)
+        })
+    }
+
     fn content_view(switch: &AppRoute) -> Html {
         match switch {
             AppRoute::Recipes(recipes_route) => {
@@ -98,7 +150,7 @@ impl App {
         }
     }
 
-    fn navbar_links(switch: &AppRoute) -> Html {
+    fn navbar_links(&self, switch: &AppRoute) -> Html {
         let item: &str = "item";
         let active_item: &str = "active item";
 
@@ -128,20 +180,20 @@ impl App {
         };
 
         html!{<>
-            <a class=home_link_classes href="/">{"Home"}</a>
+            <a class=home_link_classes onclick=&self.change_route("/".to_string()) /*href="/"*/>{"Home"}</a>
             <a class=recipes_link_classes href="/recipes">{"Recipes"}</a>
             <a class=add_recipe_link_classes href="/recipes/add">{"Add Recipe"}</a>
         </>}
 
     }
 
-    fn navigation_bar(switch: &AppRoute) -> Html {
+    fn navigation_bar(&self, switch: &AppRoute) -> Html {
         let navigation_bar = html! {<>
             <div class="ui tablet computer only padded grid">
                 <div class="ui borderless fluid huge inverted menu">
                     <div class="ui container">
                         <a class="header item navbar-site-header" href="#root">{"Recipedia"}</a>
-                        { App::navbar_links(&switch) }
+                        { self.navbar_links(&switch) }
                     </div>
                 </div>
             </div>
@@ -156,7 +208,7 @@ impl App {
                         </div>
                     </div>
                     <div class="ui vertical borderless fluid inverted menu">
-                        { App::navbar_links(&switch) }
+                        { self.navbar_links(&switch) }
                     </div>
                 </div>
             </div>

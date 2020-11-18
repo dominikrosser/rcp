@@ -7,6 +7,7 @@ mod app;
 mod recipe;
 mod recipe_list;
 mod add_recipe;
+mod reroute_agent;
 
 use yew::html::{Component, ComponentLink};
 
