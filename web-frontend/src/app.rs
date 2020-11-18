@@ -103,16 +103,10 @@ impl Component for App {
         if let Some(switch) = switch {
             html! {
                 <>                
-                    // <Router<AppRoute, RouterStateType>
-                    // render = Router::render(|switch: AppRoute| {html!{<>
-                            
-                            { self.navigation_bar(&switch) }
-                            <div class="ui center aligned container">
-                                { App::content_view(&switch) }
-                            </div>
-    
-                        // </>}})
-                    // />
+                    { self.navigation_bar(&switch) }
+                    <div class="ui center aligned container">
+                        { App::content_view(&switch) }
+                    </div>
                 </>
             }
         } else {
@@ -180,9 +174,24 @@ impl App {
         };
 
         html!{<>
-            <a class=home_link_classes onclick=&self.change_route("/".to_string()) /*href="/"*/>{"Home"}</a>
-            <a class=recipes_link_classes href="/recipes">{"Recipes"}</a>
-            <a class=add_recipe_link_classes href="/recipes/add">{"Add Recipe"}</a>
+            <a
+                class=home_link_classes,
+                onclick=&self.change_route("/".to_string())>
+                {"Home"}
+            </a>
+
+            <a
+                class=recipes_link_classes,
+                onclick=&self.change_route("/recipes/".to_string())>
+                {"Recipes"}
+            </a>
+
+            <a
+                class=add_recipe_link_classes,
+                onclick=&self.change_route("/recipes/add".to_string())>
+                {"Add Recipe"}
+            </a>
+            
         </>}
 
     }
