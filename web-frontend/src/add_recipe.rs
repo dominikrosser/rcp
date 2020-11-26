@@ -1,16 +1,16 @@
-use yew::prelude::*;
-use yew::services::fetch::{FetchService, FetchTask, Request, Response};
+use serde::{Deserialize, Serialize};
+use serde_json::json;
+use yew::agent::{Dispatched, Dispatcher};
 use yew::callback::Callback;
 use yew::events::ChangeData;
 use yew::format::{Json, Nothing};
-use serde::{Serialize, Deserialize};
-use serde_json::json;
+use yew::prelude::*;
+use yew::services::fetch::{FetchService, FetchTask, Request, Response};
 use yew_router::{route::Route, service::RouteService, Switch};
-use yew::agent::{Dispatched, Dispatcher};
 
-use crate::recipe::RecipeRequest;
-use crate::app::RouteType;
 use crate::app::RouteServiceType;
+use crate::app::RouteType;
+use crate::recipe::{OvenFanValue, RecipeRequest};
 use crate::reroute_agent::{RerouteAgent, RerouteRequestMsg};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -28,7 +28,7 @@ pub struct AddRecipeComp {
 pub struct State {
     recipe_data: RecipeRequest,
     post_recipes_task: Option<FetchTask>,
-    post_response_display_msg: Option<String>,// TODO: Vector with multiple messages
+    post_response_display_msg: Option<String>, // TODO: Vector with multiple messages
 }
 
 impl State {
@@ -36,6 +36,7 @@ impl State {
         let recipe_data: RecipeRequest = RecipeRequest {
             recipe_name: None,
             oven_time: None,
+            oven_fan: None,
             notes: None,
         };
 
@@ -55,6 +56,7 @@ pub enum Msg {
     RecipeNameInputChanged(String),
     RecipeOvenTimeInputChanged(String),
     RecipeNotesInputChanged(String),
+    RecipeOvenFanSelectChanged(String),
 }
 
 impl Component for AddRecipeComp {
@@ -67,7 +69,7 @@ impl Component for AddRecipeComp {
         Self {
             link,
             state,
-            reroute_agent: RerouteAgent::dispatcher()
+            reroute_agent: RerouteAgent::dispatcher(),
         }
     }
 
@@ -77,119 +79,145 @@ impl Component for AddRecipeComp {
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
-            Msg::Noop => { false },
+            Msg::Noop => false,
             Msg::AddRecipe => {
-                
                 let task: FetchTask = self.build_fetch_recipe_task();
 
                 // 4. store the task so it isn't canceled immediately
                 self.state.post_recipes_task = Some(task);
 
                 true
-            },
+            }
             Msg::ReceivePostResponse(data) => {
-                self.state.post_response_display_msg = Some("Successfully added recipe".to_string());
-
-                // let route_string = format!("/recipe/");
-                // let mut route_service: RouteService<()> = RouteService::new();
-                // route_service.set_route(&route_string, ());
-
-                // self.route = Route {
-                //     route: route_string,
-                //     state: (),
-                // };
-                
                 self.state.recipe_data.recipe_name = None;
+                self.state.recipe_data.oven_time = None;
+                self.state.recipe_data.oven_fan = None;
                 self.state.post_recipes_task = None;
-                
+
                 match data {
                     Ok(recipe_response) => {
                         let new_route = format!("/recipes/{}", recipe_response.recipe_uuid);
                         self.reroute_agent
                             .send(RerouteRequestMsg::Reroute(new_route));
-                    },
-                    Err(err) => {}
+                        self.state.post_response_display_msg =
+                            Some("Successfully added recipe".to_string());
+                    }
+                    Err(err) => {
+                        self.state.post_response_display_msg =
+                            Some("Error adding recipe".to_string());
+                    }
                 }
 
                 true
-            },
+            }
 
             Msg::RecipeNameInputChanged(recipe_name) => {
                 self.state.recipe_data.recipe_name = Some(recipe_name);
                 true
-            },
+            }
             Msg::RecipeOvenTimeInputChanged(oven_time) => {
                 let oven_time: f64 = oven_time.parse::<f64>().unwrap();
                 self.state.recipe_data.oven_time = Some(oven_time);
                 true
-            },
+            }
             Msg::RecipeNotesInputChanged(notes) => {
                 self.state.recipe_data.notes = Some(notes);
                 true
-            },
+            }
+            Msg::RecipeOvenFanSelectChanged(oven_fan) => {
+                self.state.recipe_data.oven_fan = OvenFanValue::from_string(&oven_fan);
+                true
+            }
         }
     }
 
     fn view(&self) -> Html {
-
         if self.state.post_recipes_task.is_some() {
-            html!{<div class="ui medium text loader active">{ "Uploading..."}</div>}
+            html! {<div class="ui medium text loader active">{ "Uploading..."}</div>}
         } else {
-            let oninput = self.link.callback(|e: InputData| {
-                    Msg::RecipeNameInputChanged(e.value)
-                });
+            let oninput: Callback<InputData> = self
+                .link
+                .callback(|e: InputData| Msg::RecipeNameInputChanged(e.value));
 
             html! {<>
-                { 
+                {
                     if let Some(msg) = &self.state.post_response_display_msg {
                         html!{ <p>{msg}</p>}
                     } else {
                         html!{}
                     }
                 }
+                <br/>
                 <h2>{"Add Recipe"}</h2>
-                
-                <label for="recipe_name_input">{"recipe_name: "}</label>
-                <input
-                    type="text",
-                    id="recipe_name_input"
-                    value=match &self.state.recipe_data.recipe_name {
-                        None => "",
-                        Some(name) => name,
-                    },
-                    oninput=self.link.callback(|e: InputData| Msg::RecipeNameInputChanged(e.value))
-                    />
 
-                <label for="oven_time_input">{"oven_time: "}</label>
-                <input
-                    type="number"
-                    id="oven_time_input"
-                    value=match &self.state.recipe_data.oven_time {
-                        None => "".to_string(),
-                        Some(t) => t.to_string(),
-                    },
-                    oninput=self.link.callback(|e: InputData| Msg::RecipeOvenTimeInputChanged(e.value))
-                    />
+                <form class="ui form">
+                    <div class="field">
+                        <label for="recipe_name_input">{"recipe_name: "}</label>
+                        <input
+                            type="text",
+                            id="recipe_name_input"
+                            value=match &self.state.recipe_data.recipe_name {
+                                None => "",
+                                Some(name) => name,
+                            },
+                            oninput=self.link.callback(|e: InputData| Msg::RecipeNameInputChanged(e.value))
+                            />
+                    </div>
 
-                <label for="notes_input">{"notes: "}</label>
-                <input
-                    type="text",
-                    id="notes_input",
-                    value=match &self.state.recipe_data.notes {
-                        None => "",
-                        Some(s) => s,
-                    },
-                    oninput=self.link.callback(|e: InputData| Msg::RecipeNotesInputChanged(e.value))
-                    />
-                
-                { self.view_submit_recipe_button() }
+                    <div class="field">
+                        <label for="oven_time_input">{"oven_time: "}</label>
+                        <input
+                            type="number"
+                            id="oven_time_input"
+                            value=match &self.state.recipe_data.oven_time {
+                                None => "".to_string(),
+                                Some(t) => t.to_string(),
+                            },
+                            oninput=self.link.callback(|e: InputData| Msg::RecipeOvenTimeInputChanged(e.value))
+                            />
+                    </div>
+
+                    <div class="field">
+                        <label for="notes_input">{"notes: "}</label>
+                        <textarea
+                            rows=4,
+                            type="text",
+                            id="notes_input",
+                            value=match &self.state.recipe_data.notes {
+                                None => "",
+                                Some(s) => s,
+                            },
+                            oninput=self.link.callback(|e: InputData| Msg::RecipeNotesInputChanged(e.value))
+                            />
+                    </div>
+
+                    <div class="field">
+                        <label for="oven_fan_select">{"oven_fan: "}</label>
+                        <select
+                            name="oven_fan",
+                            id="oven_fan_select",
+                            value=OvenFanValue::to_string(&self.state.recipe_data.oven_fan),
+                            onchange=self.link.callback(|e: ChangeData| Msg::RecipeOvenFanSelectChanged(match e {
+                                ChangeData::Select(selElement) => selElement.value(),
+                                _ => "".to_string(),
+                            }))
+                            >
+                            <option value="">{"-"}</option>
+                            <option value="Off">{"Off"}</option>
+                            <option value="Low">{"Low"}</option>
+                            <option value="High">{"High"}</option>
+                        </select>
+                    </div>
+
+                    { self.view_submit_recipe_button() }
+                </form>
+
             </>}
         }
     }
 }
 
 impl AddRecipeComp {
-
     fn build_fetch_recipe_task(&self) -> FetchTask {
         // let json_value: serde_json::Value = json!({"recipe_name": &self.state.recipe_data.recipe_name });
         // let json_body = Json(&json_value);
@@ -202,22 +230,23 @@ impl AddRecipeComp {
             .expect("Could not build that request.");
 
         // 2. construct a callback
-        let callback =
-            self.link
-                .callback(|response: Response<Json<Result<CreateRecipeResponse, anyhow::Error>>>| {
-                    let Json(data) = response.into_body();
-                    Msg::ReceivePostResponse(data)
-                });
-        
+        let callback = self.link.callback(
+            |response: Response<Json<Result<CreateRecipeResponse, anyhow::Error>>>| {
+                let Json(data) = response.into_body();
+                Msg::ReceivePostResponse(data)
+            },
+        );
+
         // 3. pass the request and callback to the fetch service
-        let task = FetchService::fetch(post_request, callback).expect("failed to start post request");
+        let task =
+            FetchService::fetch(post_request, callback).expect("failed to start post request");
 
         task
     }
 
     fn view_submit_recipe_button(&self) -> Html {
         html! {
-            <button onclick=self.link.callback(|_| Msg::AddRecipe)>
+            <button class="ui button" type="submit" onclick=self.link.callback(|_| Msg::AddRecipe)>
                 { "Submit" }
             </button>
         }

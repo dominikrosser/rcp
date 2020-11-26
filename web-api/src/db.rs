@@ -1,8 +1,8 @@
-use crate::{error::Error::*, handler::RecipeRequest, Recipe, Result};
+use crate::{error::Error::*, handler::RecipeRequest, OvenFanValue, Recipe, Result};
 use futures::StreamExt;
 use mongodb::bson::{doc, document::Document, oid::ObjectId, Bson};
+use mongodb::results::{DeleteResult, InsertOneResult, UpdateResult};
 use mongodb::{options::ClientOptions, Client, Collection};
-use mongodb::results::{InsertOneResult, UpdateResult, DeleteResult};
 
 const DB_NAME: &str = "rcp_db";
 const RECIPE_COLL: &str = "recipe";
@@ -11,6 +11,7 @@ const RECIPE_UUID: &str = "_id";
 const RECIPE_NAME: &str = "recipe_name";
 const OVEN_TIME: &str = "oven_time";
 const NOTES: &str = "notes";
+const OVEN_FAN: &str = "oven_fan";
 
 #[derive(Clone, Debug)]
 pub struct DB {
@@ -42,42 +43,37 @@ impl DB {
     }
 
     pub async fn fetch_recipe(&self, id: &str) -> Result<Recipe> {
-
         let oid: ObjectId = ObjectId::with_string(id).map_err(|_| InvalidIDError(id.to_owned()))?;
         let filter: Document = doc! {
             RECIPE_UUID: oid,
         };
         let options = None; //todo
-
         let doc = self
             .get_recipe_collection()
             .find_one(filter, options)
             .await
             .map_err(MongoQueryError)?;
-        
+
         if let Some(doc) = doc {
             self.doc_to_recipe(&doc)
         } else {
             Err(InvalidIDError(id.to_string()))
         }
-        
     }
 
     pub async fn create_recipe(&self, entry: &RecipeRequest) -> Result<String> {
-
         let doc = self.doc_from_recipe_request(&entry);
 
-        let _result: InsertOneResult = self.get_recipe_collection()
+        let _result: InsertOneResult = self
+            .get_recipe_collection()
             .insert_one(doc, None)
             .await
             .map_err(MongoQueryError)?;
 
-        //let _id = _result.inserted_id.to_string();
-        let oid  =
-            match _result.inserted_id {
-                mongodb::bson::Bson::ObjectId(oid) => oid,
-                _ => panic!("_id is not an ObjectId!"),
-            };
+        let oid = match _result.inserted_id {
+            mongodb::bson::Bson::ObjectId(oid) => oid,
+            _ => panic!("_id is not an ObjectId!"),
+        };
 
         let recipe_uuid = oid.to_hex();
 
@@ -92,11 +88,11 @@ impl DB {
 
         let doc = self.doc_from_recipe_request(&entry);
 
-        let _result: UpdateResult =
-            self.get_recipe_collection()
-                .update_one(query, doc, None)
-                .await
-                .map_err(MongoQueryError)?;
+        let _result: UpdateResult = self
+            .get_recipe_collection()
+            .update_one(query, doc, None)
+            .await
+            .map_err(MongoQueryError)?;
 
         Ok(())
     }
@@ -107,11 +103,11 @@ impl DB {
             RECIPE_UUID: oid,
         };
 
-        let _result: DeleteResult =
-            self.get_recipe_collection()
-                .delete_one(filter, None)
-                .await
-                .map_err(MongoQueryError)?;
+        let _result: DeleteResult = self
+            .get_recipe_collection()
+            .delete_one(filter, None)
+            .await
+            .map_err(MongoQueryError)?;
         Ok(())
     }
 
@@ -120,9 +116,13 @@ impl DB {
     }
 
     fn doc_from_recipe_request(&self, recipe_request: &RecipeRequest) -> Document {
-
         let oven_time: Bson = match recipe_request.oven_time {
             Some(t) => Bson::Double(t),
+            None => Bson::Null,
+        };
+
+        let oven_fan = match &recipe_request.oven_fan {
+            Some(ofv) => Bson::Int32(ofv.to_database_code()),
             None => Bson::Null,
         };
 
@@ -135,35 +135,39 @@ impl DB {
             RECIPE_NAME: recipe_request.recipe_name.clone(),
             OVEN_TIME: oven_time,
             NOTES: notes,
+            OVEN_FAN: oven_fan,
         };
 
         doc
     }
 
     fn doc_to_recipe(&self, doc: &Document) -> Result<Recipe> {
-
         let recipe_uuid: &ObjectId = doc.get_object_id(RECIPE_UUID)?;
 
         let recipe_name: &str = doc.get_str(RECIPE_NAME)?;
 
         let oven_time: Option<f64> = doc.get(OVEN_TIME).and_then(mongodb::bson::Bson::as_f64);
 
+        let oven_fan = match doc.get(OVEN_FAN).and_then(Bson::as_i32) {
+            Some(i) => OvenFanValue::from_database_code(i),
+            None => None,
+        };
+
         let notes: Option<String> = match doc.get(NOTES).and_then(Bson::as_str) {
             Some(s) => Some(s.to_owned()),
             None => None,
         };
-        
 
         let recipe = Recipe {
             recipe_uuid: recipe_uuid.to_hex(),
             recipe_name: recipe_name.to_owned(),
             oven_time: oven_time,
+            oven_fan: oven_fan,
             notes: notes,
         };
         Ok(recipe)
     }
 }
-
 
 /* FILTER EXAMPLE */
 // let filter = doc! { "author": "George Orwell" };
@@ -183,3 +187,4 @@ impl DB {
 //         Err(e) => return Err(e.into()),
 //     }
 // }
+

@@ -1,15 +1,20 @@
-use yew::prelude::*;
 use serde::{Deserialize, Serialize};
-use yew::services::fetch::{FetchService, FetchTask, Request, Response};
+use yew::agent::{Dispatched, Dispatcher};
 use yew::callback::Callback;
 use yew::format::{Json, Nothing};
+use yew::prelude::*;
+use yew::services::fetch::{FetchService, FetchTask, Request, Response};
+
+use crate::app::{RouteServiceType, RouteType};
+use crate::reroute_agent::{RerouteAgent, RerouteRequestMsg};
 
 // Struct for making add recipe requests
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RecipeRequest {
-    pub recipe_name: Option<String>, 
+    pub recipe_name: Option<String>,
     pub oven_time: Option<f64>,
-    pub notes: Option<String>
+    pub notes: Option<String>,
+    pub oven_fan: Option<OvenFanValue>,
 }
 
 impl RecipeRequest {
@@ -25,32 +30,69 @@ impl RecipeRequest {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Temperature {
     amount: f32,
     unit: TemperatureUnit,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub enum OvenFanValue {
     Off,
     Low,
-    High
+    High,
 }
 
-#[derive(Serialize, Deserialize)]
+impl OvenFanValue {
+    pub fn from_database_code(i: i32) -> Option<OvenFanValue> {
+        match i {
+            0 => Some(OvenFanValue::Off),
+            1 => Some(OvenFanValue::Low),
+            2 => Some(OvenFanValue::High),
+            _ => None,
+        }
+    }
+
+    pub fn to_database_code(&self) -> i32 {
+        match self {
+            OvenFanValue::Off => 0,
+            OvenFanValue::Low => 1,
+            OvenFanValue::High => 2,
+        }
+    }
+
+    pub fn from_string(s: &str) -> Option<OvenFanValue> {
+        match s.to_lowercase().as_str() {
+            "off" => Some(OvenFanValue::Off),
+            "low" => Some(OvenFanValue::Low),
+            "high" => Some(OvenFanValue::High),
+            _ => None,
+        }
+    }
+
+    pub fn to_string(v: &Option<OvenFanValue>) -> String {
+        match v {
+            Some(OvenFanValue::Off) => "Off".to_string(),
+            Some(OvenFanValue::Low) => "Low".to_string(),
+            Some(OvenFanValue::High) => "High".to_string(),
+            _ => "".to_string(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub enum TemperatureUnit {
     Celsius,
     Fahrenheit,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Amount {
     amount: f32,
     unit: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct IngredientData {
     /* A list of dicts which describe the amounts to use. Normally, the list will only contain one dict.
      * In cases where multiple yields need to be stored (i.e. 50 cookies vs 100 cookes vs 250 cookies),
@@ -59,7 +101,7 @@ pub struct IngredientData {
 
     /* A list of tags which describe the processing of this item. For instance, “whole”, “large dice”, “minced”, “raw”, “steamed”, etc. */
     processing: Vec<String>,
- 
+
     /* Any notes specific to this ingredient. */
     notes: String,
 
@@ -69,9 +111,8 @@ pub struct IngredientData {
 }
 
 // A dict of items, describing an ingredient, and how much of that ingredient to use.
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Ingredient {
-
     data: IngredientData,
 
     /* This field is a list of ingredients, in exactly the same format as a regular ingredient list item, minus the substitutions field.
@@ -79,7 +120,7 @@ pub struct Ingredient {
     substitutions: Vec<Ingredient>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct BookSource {
     /* This is a list. Refers to the author(s) of this recipe. Can be the same as source_authors, if appropriate.
      * If there was only one author, then they would be the only item in the list. */
@@ -95,7 +136,7 @@ pub struct BookSource {
     notes: Option<String>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct HACCPValue {
     /* Refers to specific HACCP guidelines relevant to this step. */
     control_point: String,
@@ -105,7 +146,7 @@ pub struct HACCPValue {
     critical_control_point: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Step {
     /* The only item in the dict that is absolutely required. */
     step: String,
@@ -117,7 +158,7 @@ pub struct Step {
     notes: Option<String>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Yield {
     /* The amount, relevant to the unit. */
     amount: f32,
@@ -127,9 +168,8 @@ pub struct Yield {
 }
 
 // See Open Recipe Format
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Recipe {
-
     // recipe_uuid
     pub recipe_uuid: String,
 
@@ -198,6 +238,7 @@ impl Recipe {
 pub enum Msg {
     GetRecipe,
     ReceiveFetchRecipeResponse(Result<Recipe, anyhow::Error>),
+    BackToAllRecipes,
 }
 
 #[derive(PartialEq, Clone, Properties)]
@@ -207,6 +248,7 @@ pub struct Props {
 
 pub struct RecipeComp {
     link: ComponentLink<Self>,
+    reroute_agent: Dispatcher<RerouteAgent>,
     model: Recipe,
     fetch_recipe_task: Option<FetchTask>,
     fetch_error_msg: Option<String>,
@@ -224,6 +266,7 @@ impl Component for RecipeComp {
             model: recipe,
             fetch_recipe_task: None,
             fetch_error_msg: None,
+            reroute_agent: RerouteAgent::dispatcher(),
         };
 
         recipe_comp.fetch_recipe();
@@ -238,13 +281,12 @@ impl Component for RecipeComp {
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
             Msg::GetRecipe => {
-
                 self.fetch_recipe();
 
                 // we want to redraw so that the page displays a 'fetching...' message to the user
                 // so return 'true'
                 true
-            },
+            }
             Msg::ReceiveFetchRecipeResponse(response) => {
                 match response {
                     Ok(recipe) => {
@@ -259,7 +301,14 @@ impl Component for RecipeComp {
 
                 // we want to redraw so that the page displays the fetched recipes instead of 'fetching...'
                 true
-            },
+            }
+            Msg::BackToAllRecipes => {
+                let new_route = String::from("/recipes/");
+                self.reroute_agent
+                    .send(RerouteRequestMsg::Reroute(new_route));
+
+                false
+            }
         }
     }
 
@@ -267,12 +316,14 @@ impl Component for RecipeComp {
         html! {<>
             { self.view_fetching() }
             { self.view_error() }
-            
-            <h2>{"Recipe"}</h2>
+
+            { self.view_back_to_recipes() }
+
             <br/>
+            <h2>{"Recipe"}</h2>
 
             <h3>{"recipe_uuid"}</h3>
-            <p>{ &self.model.recipe_uuid }</p> 
+            <p>{ &self.model.recipe_uuid }</p>
 
             <h3>{"recipe_name"}</h3>
             <p>{ match &self.model.recipe_name {
@@ -291,26 +342,27 @@ impl Component for RecipeComp {
                 Some(s) => s.clone(),
                 None => "Null".to_string(),
             }}</p>
+
+            <h3>{"oven_fan"}</h3>
+            <p>{ OvenFanValue::to_string(&self.model.oven_fan) }</p>
+
         </>}
     }
 }
 
 impl RecipeComp {
     fn build_fetch_recipe_task(recipe_uuid: &str, link: &ComponentLink<Self>) -> FetchTask {
-
         // 1. build the request
         let request = Request::get(format!("http://localhost:8080/recipe/{}", &recipe_uuid))
-        .body(Nothing)
-        .expect("Could not build request.");
+            .body(Nothing)
+            .expect("Could not build request.");
 
         // 2. construct a callback
-        let callback =
-            link
-                .callback(|response: Response<Json<Result<Recipe, anyhow::Error>>>| {
-                    let Json(data) = response.into_body();
-                    Msg::ReceiveFetchRecipeResponse(data)
-                });
-        
+        let callback = link.callback(|response: Response<Json<Result<Recipe, anyhow::Error>>>| {
+            let Json(data) = response.into_body();
+            Msg::ReceiveFetchRecipeResponse(data)
+        });
+
         // 3. pass the request and callback to the fetch service
         let task = FetchService::fetch(request, callback).expect("failed to start request");
 
@@ -319,7 +371,10 @@ impl RecipeComp {
 
     fn fetch_recipe(&mut self) {
         // 4. store the task so it isn't canceled immediately
-        self.fetch_recipe_task = Some(RecipeComp::build_fetch_recipe_task(&self.model.recipe_uuid, &self.link));
+        self.fetch_recipe_task = Some(RecipeComp::build_fetch_recipe_task(
+            &self.model.recipe_uuid,
+            &self.link,
+        ));
     }
 
     fn view_fetching(&self) -> Html {
@@ -335,6 +390,18 @@ impl RecipeComp {
             html! { <p>{ error.clone() }</p> }
         } else {
             html! {}
+        }
+    }
+
+    fn view_back_to_recipes(&self) -> Html {
+        html! {
+
+            <button class="ui labeled icon button",
+                    onclick=self.link.callback(|_| Msg::BackToAllRecipes),
+                    >
+                <i class="left chevron icon"></i>
+                { "Back to Recipes" }
+            </button>
         }
     }
 }

@@ -1,14 +1,14 @@
-use yew::prelude::*;
-use yew::services::fetch::{FetchService, FetchTask, Request, Response};
+use serde::Deserialize;
 use yew::callback::Callback;
 use yew::format::{Json, Nothing};
-use serde::Deserialize;
+use yew::prelude::*;
+use yew::services::fetch::{FetchService, FetchTask, Request, Response};
 
 use crate::recipe::Recipe;
 
 pub struct RecipeList {
     link: ComponentLink<Self>,
-    state: State
+    state: State,
 }
 
 pub struct State {
@@ -27,7 +27,6 @@ impl Component for RecipeList {
     type Properties = ();
 
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
-
         let task = RecipeList::build_fetch_recipe_task(&link);
 
         let state = State {
@@ -36,10 +35,7 @@ impl Component for RecipeList {
             fetch_error_msg: None,
         };
 
-        RecipeList {
-            link,
-            state,
-        }
+        RecipeList { link, state }
     }
 
     fn change(&mut self, _: Self::Properties) -> bool {
@@ -49,7 +45,6 @@ impl Component for RecipeList {
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
             Msg::GetRecipes => {
-
                 let task = RecipeList::build_fetch_recipe_task(&self.link);
 
                 // 4. store the task so it isn't canceled immediately
@@ -58,7 +53,7 @@ impl Component for RecipeList {
                 // we want to redraw so that the page displays a 'fetching...' message to the user
                 // so return 'true'
                 true
-            },
+            }
             Msg::ReceiveFetchRecipesResponse(response) => {
                 match response {
                     Ok(recipes) => {
@@ -73,12 +68,13 @@ impl Component for RecipeList {
 
                 // we want to redraw so that the page displays the fetched recipes instead of 'fetching...'
                 true
-            },
+            }
         }
     }
 
     fn view(&self) -> Html {
         html! {<>
+            <br/>
             { self.view_fetch_recipes_button() }
             { self.view_fetching() }
             { self.view_recipe_list() }
@@ -88,22 +84,20 @@ impl Component for RecipeList {
 }
 
 impl RecipeList {
-
     fn build_fetch_recipe_task(link: &ComponentLink<Self>) -> FetchTask {
-
         // 1. build the request
         let request = Request::get("http://localhost:8080/recipe")
-        .body(Nothing)
-        .expect("Could not build request.");
+            .body(Nothing)
+            .expect("Could not build request.");
 
         // 2. construct a callback
-        let callback =
-            link
-                .callback(|response: Response<Json<Result<Vec<Recipe>, anyhow::Error>>>| {
-                    let Json(data) = response.into_body();
-                    Msg::ReceiveFetchRecipesResponse(data)
-                });
-        
+        let callback = link.callback(
+            |response: Response<Json<Result<Vec<Recipe>, anyhow::Error>>>| {
+                let Json(data) = response.into_body();
+                Msg::ReceiveFetchRecipesResponse(data)
+            },
+        );
+
         // 3. pass the request and callback to the fetch service
         let task = FetchService::fetch(request, callback).expect("failed to start request");
 
@@ -117,7 +111,9 @@ impl RecipeList {
                     { "Try again to load" }
                 </button>
             }
-        } else { html!{} }
+        } else {
+            html! {}
+        }
     }
 
     fn view_recipe_list(&self) -> Html {
@@ -126,7 +122,7 @@ impl RecipeList {
                 for recipes
                     .iter()
                     .enumerate()
-                    .map(|entry| self.view_entry(entry)) 
+                    .map(|entry| self.view_entry(entry))
             };
 
             let recipe_list_html = html! {<>
@@ -144,16 +140,15 @@ impl RecipeList {
             </>};
 
             recipe_list_html
-
         } else {
-            html! { }
+            html! {}
         }
     }
 
     fn view_entry(&self, (idx, recipe): (usize, &Recipe)) -> Html {
-        html!{
+        html! {
             <tr>
-                
+
                 <td>
                     <a href={format!("/recipes/{}", &recipe.recipe_uuid)}>
                         {
@@ -171,7 +166,7 @@ impl RecipeList {
 
     fn view_fetching(&self) -> Html {
         if self.state.fetch_recipes_task.is_some() {
-            html! { 
+            html! {
                 <div class="ui medium text loader active">{ "Loading data..."}</div>
             }
         } else {
@@ -181,7 +176,7 @@ impl RecipeList {
 
     fn view_error(&self) -> Html {
         if self.state.fetch_recipes_task.is_some() {
-            html!{}
+            html! {}
         } else if let Some(ref error) = self.state.fetch_error_msg {
             html! { <p>{ error.clone() }</p> }
         } else {
@@ -199,3 +194,4 @@ impl State {
         return zero_vec;
     }
 }
+

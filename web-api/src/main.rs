@@ -20,10 +20,15 @@ pub struct Recipe {
 
     /* How long the dish should spend in the oven.
      * This is an overall value, which refers to the recipe as a whole. If multiple oven times are used, they should be specified in the recipe. */
-    oven_time: Option<f64>,
+    pub oven_time: Option<f64>,
 
      /* This is a field that will appear in several locations. The recipe itself may have notes, each ingredient may have notes, and each step may have notes. */
-    notes: Option<String>,
+    pub notes: Option<String>,
+
+    /* Setting to be used with convection oven. Possible values are “Off”, “Low” and “High”. If not specified, it is assumed to be “Off”.
+     * If specified, all software should display and print this value. If not specified, it is up to the software whether or not it is displayed and/or printed,
+     * but it should be consistent. */
+    pub oven_fan: Option<OvenFanValue>,
 }
 
 impl Recipe {
@@ -33,6 +38,33 @@ impl Recipe {
             recipe_name: "".to_string(),
             oven_time: None,
             notes: None,
+            oven_fan: None,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum OvenFanValue {
+    Off,
+    Low,
+    High
+}
+
+impl OvenFanValue {
+    fn from_database_code(i: i32) -> Option<OvenFanValue> {
+        match i {
+            0 => Some(OvenFanValue::Off),
+            1 => Some(OvenFanValue::Low),
+            2 => Some(OvenFanValue::High),
+            _ => None,
+        }
+    }
+
+    fn to_database_code(&self) -> i32 {
+        match self {
+            OvenFanValue::Off => 0,
+            OvenFanValue::Low => 1,
+            OvenFanValue::High => 2,
         }
     }
 }
