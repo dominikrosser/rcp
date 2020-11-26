@@ -8,6 +8,7 @@ edition = "2018"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+rcp_shared_rs_code = { path = "../rcp_shared_rs_code" }
 log = "0.4"
 strum = "0.17"
 strum_macros = "0.17"

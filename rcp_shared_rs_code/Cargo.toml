@@ -1,0 +1,12 @@
+[package]
+name = "rcp_shared_rs_code"
+version = "0.1.0"
+authors = ["Dominik Rosser <dominik.rosser@protonmail.ch>"]
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+serde = "1"
+serde_derive = "1"

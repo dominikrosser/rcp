@@ -8,9 +8,11 @@ use yew::prelude::*;
 use yew::services::fetch::{FetchService, FetchTask, Request, Response};
 use yew_router::{route::Route, service::RouteService, Switch};
 
+use rcp_shared_rs_code::models::oven_fan_value::OvenFanValue;
+
 use crate::app::RouteServiceType;
 use crate::app::RouteType;
-use crate::recipe::{OvenFanValue, RecipeRequest};
+use crate::recipe::RecipeRequest;
 use crate::reroute_agent::{RerouteAgent, RerouteRequestMsg};
 
 #[derive(Serialize, Deserialize, Debug)]

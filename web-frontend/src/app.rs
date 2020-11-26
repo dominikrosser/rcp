@@ -212,4 +212,3 @@ impl App {
         navigation_bar
     }
 }
-

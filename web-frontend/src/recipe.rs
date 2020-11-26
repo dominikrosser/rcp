@@ -5,6 +5,15 @@ use yew::format::{Json, Nothing};
 use yew::prelude::*;
 use yew::services::fetch::{FetchService, FetchTask, Request, Response};
 
+use rcp_shared_rs_code::models::book_source::BookSource;
+use rcp_shared_rs_code::models::haccp_value::HACCPValue;
+use rcp_shared_rs_code::models::ingredient::Ingredient;
+use rcp_shared_rs_code::models::oven_fan_value::OvenFanValue;
+use rcp_shared_rs_code::models::r#yield::Yield;
+use rcp_shared_rs_code::models::step::Step;
+use rcp_shared_rs_code::models::temperature::Temperature;
+use rcp_shared_rs_code::models::temperature_unit::TemperatureUnit;
+
 use crate::app::{RouteServiceType, RouteType};
 use crate::reroute_agent::{RerouteAgent, RerouteRequestMsg};
 
@@ -28,143 +37,6 @@ impl RecipeRequest {
             Some(name) => name.chars().count() >= 4,
         }
     }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Temperature {
-    amount: f32,
-    unit: TemperatureUnit,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub enum OvenFanValue {
-    Off,
-    Low,
-    High,
-}
-
-impl OvenFanValue {
-    pub fn from_database_code(i: i32) -> Option<OvenFanValue> {
-        match i {
-            0 => Some(OvenFanValue::Off),
-            1 => Some(OvenFanValue::Low),
-            2 => Some(OvenFanValue::High),
-            _ => None,
-        }
-    }
-
-    pub fn to_database_code(&self) -> i32 {
-        match self {
-            OvenFanValue::Off => 0,
-            OvenFanValue::Low => 1,
-            OvenFanValue::High => 2,
-        }
-    }
-
-    pub fn from_string(s: &str) -> Option<OvenFanValue> {
-        match s.to_lowercase().as_str() {
-            "off" => Some(OvenFanValue::Off),
-            "low" => Some(OvenFanValue::Low),
-            "high" => Some(OvenFanValue::High),
-            _ => None,
-        }
-    }
-
-    pub fn to_string(v: &Option<OvenFanValue>) -> String {
-        match v {
-            Some(OvenFanValue::Off) => "Off".to_string(),
-            Some(OvenFanValue::Low) => "Low".to_string(),
-            Some(OvenFanValue::High) => "High".to_string(),
-            _ => "".to_string(),
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub enum TemperatureUnit {
-    Celsius,
-    Fahrenheit,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Amount {
-    amount: f32,
-    unit: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct IngredientData {
-    /* A list of dicts which describe the amounts to use. Normally, the list will only contain one dict.
-     * In cases where multiple yields need to be stored (i.e. 50 cookies vs 100 cookes vs 250 cookies),
-     * each yield will have its own dict in this list, in the same order as the recipe’s yield field. */
-    amounts: Vec<Amount>,
-
-    /* A list of tags which describe the processing of this item. For instance, “whole”, “large dice”, “minced”, “raw”, “steamed”, etc. */
-    processing: Vec<String>,
-
-    /* Any notes specific to this ingredient. */
-    notes: String,
-
-    /* This corresponds with the index keys in the USDA Standard Reference. It is generally used for easy lookup of nutritional data.
-     * If possible, this should be used, and USDA data, when available, is preferable to any other nutritional data source. */
-    usda_num: Option<String>,
-}
-
-// A dict of items, describing an ingredient, and how much of that ingredient to use.
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Ingredient {
-    data: IngredientData,
-
-    /* This field is a list of ingredients, in exactly the same format as a regular ingredient list item, minus the substitutions field.
-     * For instance, it must contain amounts, and may also contain processing, usda_num, notes, etc. */
-    substitutions: Vec<Ingredient>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct BookSource {
-    /* This is a list. Refers to the author(s) of this recipe. Can be the same as source_authors, if appropriate.
-     * If there was only one author, then they would be the only item in the list. */
-    authors: Vec<String>,
-
-    /* Title of the book. This is a single value, not a list. */
-    title: String,
-
-    /* International Standard Book Number, if available. */
-    isbn: Option<String>,
-
-    /* Any information about the book that does not fit into another field. */
-    notes: Option<String>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct HACCPValue {
-    /* Refers to specific HACCP guidelines relevant to this step. */
-    control_point: String,
-
-    /* Refers to specific HACCP guidelines relevant to this step, which are critical to the safety outcome of this recipe.
-     * For instance, “Cook until the food reaches an internal temperature of 165F.” */
-    critical_control_point: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Step {
-    /* The only item in the dict that is absolutely required. */
-    step: String,
-
-    /* A dict, which can contain either a control_point or a critical_control_point. Should not contain both. */
-    haccp: Option<HACCPValue>,
-
-    /* A list of notes relevant to this step. Often known as “bench notes” to professionals. */
-    notes: Option<String>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Yield {
-    /* The amount, relevant to the unit. */
-    amount: f32,
-
-    /* Generally “servings”, but up to the user. Can be “packages”, “cups”, “glasses”, etc. */
-    unit: String,
 }
 
 // See Open Recipe Format
