@@ -5,6 +5,7 @@ authors = ["Dominik Rosser"]
 edition = "2018"
 
 [dependencies]
+rcp_shared_rs_code = { path = "../rcp_shared_rs_code" }
 tokio = { version = "0.2.0", features = ["macros", "rt-threaded"] }
 warp = "0.2"
 serde = {version = "1.0", features = ["derive"] }

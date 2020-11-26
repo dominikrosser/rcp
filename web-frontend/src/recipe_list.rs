@@ -4,7 +4,7 @@ use yew::format::{Json, Nothing};
 use yew::prelude::*;
 use yew::services::fetch::{FetchService, FetchTask, Request, Response};
 
-use crate::recipe::Recipe;
+use rcp_shared_rs_code::models::recipe::Recipe;
 
 pub struct RecipeList {
     link: ComponentLink<Self>,
@@ -194,4 +194,3 @@ impl State {
         return zero_vec;
     }
 }
-

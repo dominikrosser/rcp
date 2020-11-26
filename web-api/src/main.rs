@@ -4,6 +4,8 @@ use std::convert::Infallible;
 use warp::{Filter, http::Method, Rejection};
 use warp::http::header::HeaderName;
 
+use rcp_shared_rs_code::models::oven_fan_value::OvenFanValue;
+
 type Result<T> = std::result::Result<T, error::Error>;
 type WebResult<T> = std::result::Result<T, Rejection>;
 
@@ -39,32 +41,6 @@ impl Recipe {
             oven_time: None,
             notes: None,
             oven_fan: None,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub enum OvenFanValue {
-    Off,
-    Low,
-    High
-}
-
-impl OvenFanValue {
-    fn from_database_code(i: i32) -> Option<OvenFanValue> {
-        match i {
-            0 => Some(OvenFanValue::Off),
-            1 => Some(OvenFanValue::Low),
-            2 => Some(OvenFanValue::High),
-            _ => None,
-        }
-    }
-
-    fn to_database_code(&self) -> i32 {
-        match self {
-            OvenFanValue::Off => 0,
-            OvenFanValue::Low => 1,
-            OvenFanValue::High => 2,
         }
     }
 }
