@@ -1,0 +1,9 @@
+version: '3.3'
+services:
+    mongo:
+        ports:
+            - '27017:27017'
+        volumes:
+            - '`pwd`/data/db:/data/db'
+        container_name: rcp_db
+        image: mongo

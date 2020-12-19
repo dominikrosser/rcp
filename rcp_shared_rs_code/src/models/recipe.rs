@@ -37,8 +37,7 @@ pub struct Recipe {
     /* This is a field that will appear in several locations. The recipe itself may have notes, each ingredient may have notes, and each step may have notes. */
     pub notes: Option<String>,
 
-    /* If this recipe was originally pulled from a book, then the book information should go here.
-     * Recipe software should make an intelligent effort to include correct information in the correct fields,
+    /* If this recipe was originally pulled from a book, then the book information should go here     * Recipe software should make an intelligent effort to include correct information in the correct fields,
      * rather than just dumping everything into a generic notes field. */
     pub source_book: Option<BookSource>,
 

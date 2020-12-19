@@ -1,15 +1,8 @@
-use crate::{db::DB, WebResult};
 use crate::OvenFanValue;
+use crate::{db::DB, WebResult};
 use serde::{Deserialize, Serialize};
 use warp::{http::StatusCode, reject, reply::json, Reply};
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct RecipeRequest {
-    pub recipe_name: String,
-    pub oven_time: Option<f64>,
-    pub notes: Option<String>,
-    pub oven_fan: Option<OvenFanValue>,
-}
+pub use rcp_shared_rs_code::models::recipe_request::RecipeRequest;
 
 pub async fn recipes_list_handler(db: DB) -> WebResult<impl Reply> {
     let recipes = db.fetch_recipes().await.map_err(|e| reject::custom(e))?;
@@ -28,7 +21,10 @@ pub struct CreateRecipeResponse {
 }
 
 pub async fn create_recipe_handler(body: RecipeRequest, db: DB) -> WebResult<impl Reply> {
-    let _id = db.create_recipe(&body).await.map_err(|e| reject::custom(e))?;
+    let _id = db
+        .create_recipe(&body)
+        .await
+        .map_err(|e| reject::custom(e))?;
 
     let response = CreateRecipeResponse {
         status: StatusCode::CREATED.as_u16(),
@@ -50,3 +46,4 @@ pub async fn delete_recipe_handler(id: String, db: DB) -> WebResult<impl Reply> 
     db.delete_recipe(&id).await.map_err(|e| reject::custom(e))?;
     Ok(StatusCode::OK)
 }
+

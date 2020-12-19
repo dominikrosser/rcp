@@ -1,8 +1,10 @@
-use crate::{error::Error::*, handler::RecipeRequest, OvenFanValue, Recipe, Result};
+use crate::{error::Error::*, handler::RecipeRequest, OvenFanValue, Result};
 use futures::StreamExt;
 use mongodb::bson::{doc, document::Document, oid::ObjectId, Bson};
 use mongodb::results::{DeleteResult, InsertOneResult, UpdateResult};
 use mongodb::{options::ClientOptions, Client, Collection};
+
+use rcp_shared_rs_code::models::recipe::Recipe;
 
 const DB_NAME: &str = "rcp_db";
 const RECIPE_COLL: &str = "recipe";
@@ -144,9 +146,12 @@ impl DB {
     fn doc_to_recipe(&self, doc: &Document) -> Result<Recipe> {
         let recipe_uuid: &ObjectId = doc.get_object_id(RECIPE_UUID)?;
 
-        let recipe_name: &str = doc.get_str(RECIPE_NAME)?;
+        let recipe_name: Option<String> = match doc.get(RECIPE_NAME).and_then(Bson::as_str) {
+            Some(s) => Some(s.to_owned()),
+            None => None,
+        };
 
-        let oven_time: Option<f64> = doc.get(OVEN_TIME).and_then(mongodb::bson::Bson::as_f64);
+        let oven_time: Option<f64> = doc.get(OVEN_TIME).and_then(Bson::as_f64);
 
         let oven_fan = match doc.get(OVEN_FAN).and_then(Bson::as_i32) {
             Some(i) => OvenFanValue::from_database_code(i),
@@ -160,10 +165,17 @@ impl DB {
 
         let recipe = Recipe {
             recipe_uuid: recipe_uuid.to_hex(),
-            recipe_name: recipe_name.to_owned(),
+            recipe_name: recipe_name,
             oven_time: oven_time,
             oven_fan: oven_fan,
             notes: notes,
+            oven_temp: None,
+            ingredients: None,
+            source_url: None,
+            source_book: None,
+            source_authors: None,
+            steps: None,
+            yields: None,
         };
         Ok(recipe)
     }
@@ -187,4 +199,3 @@ impl DB {
 //         Err(e) => return Err(e.into()),
 //     }
 // }
-

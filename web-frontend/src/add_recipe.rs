@@ -221,8 +221,6 @@ impl Component for AddRecipeComp {
 
 impl AddRecipeComp {
     fn build_fetch_recipe_task(&self) -> FetchTask {
-        // let json_value: serde_json::Value = json!({"recipe_name": &self.state.recipe_data.recipe_name });
-        // let json_body = Json(&json_value);
         let json_body = Json(&self.state.recipe_data);
 
         // 1. build the request
