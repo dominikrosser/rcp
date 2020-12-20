@@ -4,6 +4,6 @@ services:
         ports:
             - '27017:27017'
         volumes:
-            - '`pwd`/data/db:/data/db'
+            - '`pwd`/data/db:/data/db:rw'
         container_name: rcp_db
         image: mongo

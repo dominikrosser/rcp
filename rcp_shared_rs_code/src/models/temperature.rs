@@ -4,6 +4,6 @@ use super::temperature_unit::TemperatureUnit;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Temperature {
-    amount: f32,
-    unit: TemperatureUnit,
+    pub amount: f64,
+    pub unit: TemperatureUnit,
 }

@@ -150,7 +150,12 @@ impl Component for RecipeComp {
             }}</p>
 
             <h3>{"oven_fan"}</h3>
-            <p>{ OvenFanValue::to_string(&self.model.oven_fan) }</p>
+            <p>{ if let Some(of) = &self.model.oven_fan {
+                OvenFanValue::to_string(of)
+                } else {
+                    "".to_string()
+                }
+            }</p>
 
         </>}
     }

@@ -4,7 +4,12 @@ use mongodb::bson::{doc, document::Document, oid::ObjectId, Bson};
 use mongodb::results::{DeleteResult, InsertOneResult, UpdateResult};
 use mongodb::{options::ClientOptions, Client, Collection};
 
+use rcp_shared_rs_code::models::ingredient::IngredientData;
 use rcp_shared_rs_code::models::recipe::Recipe;
+use rcp_shared_rs_code::models::step::Step;
+use rcp_shared_rs_code::models::temperature::Temperature;
+use rcp_shared_rs_code::models::{book_source::BookSource, ingredient::Ingredient};
+use rcp_shared_rs_code::models::{haccp_value::HACCPValue, r#yield::Yield};
 
 const DB_NAME: &str = "rcp_db";
 const RECIPE_COLL: &str = "recipe";
@@ -14,6 +19,13 @@ const RECIPE_NAME: &str = "recipe_name";
 const OVEN_TIME: &str = "oven_time";
 const NOTES: &str = "notes";
 const OVEN_FAN: &str = "oven_fan";
+const OVEN_TEMP: &str = "oven_temp";
+const SOURCE_BOOK: &str = "source_book";
+const SOURCE_AUTHORS: &str = "source_authors";
+const SOURCE_URL: &str = "source_url";
+const INGREDIENTS: &str = "ingredients";
+const STEPS: &str = "steps";
+const YIELDS: &str = "yields";
 
 #[derive(Clone, Debug)]
 pub struct DB {
@@ -124,7 +136,7 @@ impl DB {
         };
 
         let oven_fan = match &recipe_request.oven_fan {
-            Some(ofv) => Bson::Int32(ofv.to_database_code()),
+            Some(ofv) => Bson::String(ofv.to_string()),
             None => Bson::Null,
         };
 
@@ -133,11 +145,71 @@ impl DB {
             None => Bson::Null,
         };
 
+        let oven_temp = match &recipe_request.oven_temp {
+            Some(temp) => Bson::Document(self.temperature_to_doc(&temp)),
+            None => Bson::Null,
+        };
+
+        let source_book = match &recipe_request.source_book {
+            Some(bs) => Bson::Document(self.book_source_to_doc(&bs)),
+            None => Bson::Null,
+        };
+
+        let source_authors = match &recipe_request.source_authors {
+            Some(authors) => {
+                let authors: Vec<Bson> = authors.iter().map(|s| Bson::String(s.clone())).collect();
+                Bson::Array(authors)
+            }
+            None => Bson::Null,
+        };
+
+        let source_url = match &recipe_request.source_url {
+            Some(s) => Bson::String(s.clone()),
+            None => Bson::Null,
+        };
+
+        let ingredients = match &recipe_request.ingredients {
+            Some(i) => {
+                let ingredients: Vec<Bson> = i
+                    .iter()
+                    .map(|i| Bson::Document(self.ingredient_to_doc(&i)))
+                    .collect();
+
+                Bson::Array(ingredients)
+            }
+            None => Bson::Null,
+        };
+
+        let steps = match &recipe_request.steps {
+            Some(v) => Bson::Array(
+                v.iter()
+                    .map(|step| Bson::Document(self.step_to_doc(&step)))
+                    .collect(),
+            ),
+            None => Bson::Null,
+        };
+
+        let yields = match &recipe_request.yields {
+            Some(v) => Bson::Array(
+                v.iter()
+                    .map(|y| Bson::Document(self.yield_to_doc(&y)))
+                    .collect(),
+            ),
+            None => Bson::Null,
+        };
+
         let doc: Document = doc! {
             RECIPE_NAME: recipe_request.recipe_name.clone(),
             OVEN_TIME: oven_time,
             NOTES: notes,
             OVEN_FAN: oven_fan,
+            OVEN_TEMP: oven_temp,
+            SOURCE_BOOK: source_book,
+            SOURCE_AUTHORS: source_authors,
+            SOURCE_URL: source_url,
+            INGREDIENTS: ingredients,
+            STEPS: steps,
+            YIELDS: yields,
         };
 
         doc
@@ -153,8 +225,8 @@ impl DB {
 
         let oven_time: Option<f64> = doc.get(OVEN_TIME).and_then(Bson::as_f64);
 
-        let oven_fan = match doc.get(OVEN_FAN).and_then(Bson::as_i32) {
-            Some(i) => OvenFanValue::from_database_code(i),
+        let oven_fan = match doc.get(OVEN_FAN).and_then(Bson::as_str) {
+            Some(s) => OvenFanValue::from_string(s),
             None => None,
         };
 
@@ -163,21 +235,235 @@ impl DB {
             None => None,
         };
 
+        let oven_temp: Option<Temperature> = match doc.get(OVEN_TEMP).and_then(Bson::as_document) {
+            Some(doc) => {
+                let temp = self.doc_to_temperature(doc);
+
+                if temp.is_ok() {
+                    // TODO: This code is ugly and could be improved
+                    Some(temp.unwrap())
+                } else {
+                    None
+                }
+            }
+            None => None,
+        };
+
+        let ingredients = None;
+
+        let source_url = None;
+
+        let source_book = None;
+
+        let source_authors = None;
+
+        let steps = None;
+
+        let yields = None;
+
         let recipe = Recipe {
             recipe_uuid: recipe_uuid.to_hex(),
-            recipe_name: recipe_name,
-            oven_time: oven_time,
-            oven_fan: oven_fan,
-            notes: notes,
-            oven_temp: None,
-            ingredients: None,
-            source_url: None,
-            source_book: None,
-            source_authors: None,
-            steps: None,
-            yields: None,
+            recipe_name,
+            oven_time,
+            oven_fan,
+            notes,
+            oven_temp,
+            ingredients,
+            source_url,
+            source_book,
+            source_authors,
+            steps,
+            yields,
         };
         Ok(recipe)
+    }
+
+    fn ingredient_to_doc(&self, i: &Ingredient) -> Document {
+        let substitutions = match &i.substitutions {
+            Some(v) => {
+                let subs = v
+                    .iter()
+                    .map(|d| Bson::Document(self.ingredient_data_to_doc(&d)))
+                    .collect();
+
+                Bson::Array(subs)
+            }
+            None => Bson::Null,
+        };
+
+        doc! {
+            "ingredient": self.ingredient_data_to_doc(&i.ingredient),
+            "substitutions": substitutions,
+        }
+    }
+
+    fn doc_to_ingredient(&self, doc: &Document) -> Result<Ingredient> {
+        let ing_data = unimplemented!(); // TODO
+
+        let substitutions = unimplemented!(); // TODO
+
+        let ing = Ingredient {
+            ingredient: ing_data,
+            substitutions,
+        };
+
+        Ok(ing)
+    }
+
+    fn ingredient_data_to_doc(&self, ing_data: &IngredientData) -> Document {
+        let doc = doc! {
+            "amounts": match &ing_data.amounts {
+                Some(amounts) => {
+                    let amounts = amounts.iter().map(|a| {
+                            Bson::Document(doc! {
+                                "amount": Bson::Double(a.amount),
+                                "unit": Bson::String(a.unit.clone()),
+                            })
+                        }).collect();
+
+                    Bson::Array(amounts)
+                },
+                None => Bson::Null,
+            },
+            "processing": Bson::Null,
+        };
+
+        doc
+    }
+
+    fn doc_to_ingredient_data(&self, doc: &Document) -> Result<IngredientData> {
+        let amounts = unimplemented!(); // TODO
+
+        let processing = unimplemented!(); // TODO
+
+        let notes = unimplemented!(); // TODO
+
+        let ingredient_name = unimplemented!(); // TODO
+
+        let ing_data = IngredientData {
+            amounts,
+            processing,
+            notes,
+            ingredient_name,
+        };
+
+        Ok(ing_data)
+    }
+
+    fn step_to_doc(&self, step: &Step) -> Document {
+        let doc = doc! {
+
+            "step": Bson::String(step.step.clone()),
+            "haccp": match &step.haccp {
+                Some(haccp_value) => Bson::Document(self.haccp_value_to_doc(&haccp_value)),
+                None => Bson::Null,
+            },
+            "notes": match &step.notes {
+                Some(notes) => Bson::String(notes.clone()),
+                None => Bson::Null,
+            },
+        };
+
+        doc
+    }
+
+    fn doc_to_step(&self, doc: &Document) -> Result<Step> {
+        let step = unimplemented!(); //TODO
+
+        let haccp = unimplemented!(); //TODO
+
+        let notes = unimplemented!(); //TODO
+
+        let step = Step { step, haccp, notes };
+
+        Ok(step)
+    }
+
+    fn haccp_value_to_doc(&self, hv: &HACCPValue) -> Document {
+        doc! {
+            "control_point": Bson::String(hv.control_point.clone()),
+            "critical_control_point": Bson::String(hv.critical_control_point.clone()),
+        }
+    }
+
+    fn doc_to_haccp_value(&self, doc: &Document) -> Result<HACCPValue> {
+        let control_point = unimplemented!(); //TODO
+
+        let critical_control_point = unimplemented!(); //TODO
+
+        let haccp_value = HACCPValue {
+            control_point,
+            critical_control_point,
+        };
+
+        Ok(haccp_value)
+    }
+
+    fn yield_to_doc(&self, y: &Yield) -> Document {
+        doc! {
+            "amount": Bson::Double(y.amount),
+            "unit": Bson::String(y.unit.clone()),
+        }
+    }
+
+    fn doc_to_yield(&self, doc: &Document) -> Result<Yield> {
+        let amount = unimplemented!(); //TODO
+
+        let unit = unimplemented!(); //TODO
+
+        let r#yield = Yield { amount, unit };
+
+        Ok(r#yield)
+    }
+
+    fn temperature_to_doc(&self, t: &Temperature) -> Document {
+        doc! {
+            "amount": Bson::Double(t.amount),
+            "unit": Bson::String(t.unit.to_string()),
+        }
+    }
+
+    fn doc_to_temperature(&self, doc: &Document) -> Result<Temperature> {
+        let amount = unimplemented!(); // TODO
+
+        let unit = unimplemented!(); //TODO
+
+        let t = Temperature { amount, unit };
+
+        Ok(t)
+    }
+
+    fn book_source_to_doc(&self, bs: &BookSource) -> Document {
+        let authors = bs.authors.iter().map(|s| Bson::String(s.clone())).collect();
+
+        doc! {
+            "authors": Bson::Array(authors),
+            "title": Bson::String(bs.title.clone()),
+            "isbn": match &bs.isbn {
+                Some(s) => Bson::String(s.clone()),
+                None => Bson::Null,
+            },
+            "notes": match &bs.notes {
+                Some(s) => Bson::String(s.clone()),
+                None => Bson::Null,
+            },
+        }
+    }
+
+    fn doc_to_book_source(&self, doc: &Document) -> Result<BookSource> {
+        let authors = unimplemented!();
+        let title = unimplemented!();
+        let isbn = unimplemented!();
+        let notes = unimplemented!();
+
+        let bs = BookSource {
+            authors,
+            title,
+            isbn,
+            notes,
+        };
+
+        Ok(bs)
     }
 }
 

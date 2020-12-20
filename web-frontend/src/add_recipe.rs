@@ -198,7 +198,7 @@ impl Component for AddRecipeComp {
                         <select
                             name="oven_fan",
                             id="oven_fan_select",
-                            value=OvenFanValue::to_string(&self.state.recipe_data.oven_fan),
+                            value={if let Some(of) = &self.state.recipe_data.oven_fan { OvenFanValue::to_string(of) } else { "".to_string() }},
                             onchange=self.link.callback(|e: ChangeData| Msg::RecipeOvenFanSelectChanged(match e {
                                 ChangeData::Select(selElement) => selElement.value(),
                                 _ => "".to_string(),

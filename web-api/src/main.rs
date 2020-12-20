@@ -1,3 +1,9 @@
+#![recursion_limit = "512"]
+#![allow(dead_code)]
+#![allow(unused_imports)]
+#![allow(unused_variables)]
+#![allow(unreachable_code)]
+
 use db::DB;
 use serde::{Deserialize, Serialize};
 use std::convert::Infallible;
@@ -13,38 +19,6 @@ type WebResult<T> = std::result::Result<T, Rejection>;
 mod db;
 mod error;
 mod handler;
-
-// #[derive(Serialize, Deserialize, Debug)]
-// pub struct Recipe {
-//     pub recipe_uuid: String,
-//
-//     /* The name of this recipe. */
-//     pub recipe_name: String,
-//
-//     /* How long the dish should spend in the oven.
-//      * This is an overall value, which refers to the recipe as a whole. If multiple oven times are used, they should be specified in the recipe. */
-//     pub oven_time: Option<f64>,
-//
-//      /* This is a field that will appear in several locations. The recipe itself may have notes, each ingredient may have notes, and each step may have notes. */
-//     pub notes: Option<String>,
-//
-//     /* Setting to be used with convection oven. Possible values are “Off”, “Low” and “High”. If not specified, it is assumed to be “Off”.
-//      * If specified, all software should display and print this value. If not specified, it is up to the software whether or not it is displayed and/or printed,
-//      * but it should be consistent. */
-//     pub oven_fan: Option<OvenFanValue>,
-// }
-
-// impl Recipe {
-//     pub fn new() -> Self {
-//         Self {
-//             recipe_uuid: "".to_string(),
-//             recipe_name: "".to_string(),
-//             oven_time: None,
-//             notes: None,
-//             oven_fan: None,
-//         }
-//     }
-// }
 
 #[tokio::main]
 async fn main() -> Result<()> {

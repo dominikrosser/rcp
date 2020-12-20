@@ -56,3 +56,4 @@ pub async fn handle_rejection(err: Rejection) -> std::result::Result<Box<dyn Rep
 
     Ok(Box::new(reply::with_status(json, code)))
 }
+
