@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use super::haccp_value::HACCPValue;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Default, Debug)]
 pub struct Step {
     /* The only item in the dict that is absolutely required. */
     pub step: String,

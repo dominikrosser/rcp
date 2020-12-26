@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+pub use std::str::FromStr;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum TemperatureUnit {
@@ -6,19 +7,30 @@ pub enum TemperatureUnit {
     Fahrenheit,
 }
 
-impl TemperatureUnit {
-    pub fn from_string(s: &str) -> Option<TemperatureUnit> {
+impl Default for TemperatureUnit {
+    fn default() -> Self {
+        TemperatureUnit::Celsius
+    }
+}
+
+impl FromStr for TemperatureUnit {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "celsius" => Some(TemperatureUnit::Celsius),
-            "fahrenheit" => Some(TemperatureUnit::Fahrenheit),
-            _ => None,
+            "celsius" => Ok(TemperatureUnit::Celsius),
+            "fahrenheit" => Ok(TemperatureUnit::Fahrenheit),
+            _ => Err(()),
         }
     }
+}
 
-    pub fn to_string(&self) -> String {
+impl std::fmt::Display for TemperatureUnit {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            TemperatureUnit::Celsius => "Celsius".to_string(),
-            TemperatureUnit::Fahrenheit => "Fahrenheit".to_string(),
-        }
+            TemperatureUnit::Celsius => fmt.write_str("Celsius")?,
+            TemperatureUnit::Fahrenheit => fmt.write_str("Fahrenheit")?,
+        };
+        Ok(())
     }
 }

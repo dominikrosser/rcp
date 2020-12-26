@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum OvenFanValue {
@@ -7,21 +8,32 @@ pub enum OvenFanValue {
     High,
 }
 
-impl OvenFanValue {
-    pub fn from_string(s: &str) -> Option<OvenFanValue> {
+impl Default for OvenFanValue {
+    fn default() -> Self {
+        OvenFanValue::Off
+    }
+}
+
+impl FromStr for OvenFanValue {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "off" => Some(OvenFanValue::Off),
-            "low" => Some(OvenFanValue::Low),
-            "high" => Some(OvenFanValue::High),
-            _ => None,
+            "off" => Ok(OvenFanValue::Off),
+            "low" => Ok(OvenFanValue::Low),
+            "high" => Ok(OvenFanValue::High),
+            _ => Err(()),
         }
     }
+}
 
-    pub fn to_string(&self) -> String {
+impl std::fmt::Display for OvenFanValue {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            OvenFanValue::Off => "Off".to_string(),
-            OvenFanValue::Low => "Low".to_string(),
-            OvenFanValue::High => "High".to_string(),
-        }
+            OvenFanValue::Off => fmt.write_str("Off")?,
+            OvenFanValue::Low => fmt.write_str("Low")?,
+            OvenFanValue::High => fmt.write_str("High")?,
+        };
+        Ok(())
     }
 }

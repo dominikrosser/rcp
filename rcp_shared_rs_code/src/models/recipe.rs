@@ -7,11 +7,14 @@ use super::r#yield::Yield;
 use super::step::Step;
 use super::temperature::Temperature;
 use super::temperature_unit::TemperatureUnit;
+use super::recipe_request::RecipeRequest;
 
 // See Open Recipe Format
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Default, Debug)]
+#[serde(default)]
 pub struct Recipe {
     // recipe_uuid
+    #[serde(alias = "_id")]
     pub recipe_uuid: String,
 
     /* The name of this recipe. */
@@ -56,21 +59,42 @@ pub struct Recipe {
     pub yields: Option<Vec<Yield>>,
 }
 
-impl Recipe {
-    pub fn new(uid: &str) -> Self {
+impl From<RecipeRequest> for Recipe {
+    fn from(rr: RecipeRequest) -> Self {
         Self {
-            recipe_uuid: uid.into(),
-            recipe_name: None,
-            oven_fan: None,
-            oven_temp: None,
-            oven_time: None,
-            ingredients: None,
-            notes: None,
-            source_book: None,
-            source_authors: None,
-            source_url: None,
-            steps: None,
-            yields: None,
+            recipe_uuid: "".to_string(),
+            recipe_name: rr.recipe_name,
+            oven_fan: rr.oven_fan,
+            oven_temp: rr.oven_temp,
+            oven_time: rr.oven_time,
+            ingredients: rr.ingredients,
+            notes: rr.notes,
+            source_book: rr.source_book,
+            source_authors: rr.source_authors,
+            source_url: rr.source_url,
+            steps: rr.steps,
+            yields: rr.yields,
         }
     }
+}
+
+impl Recipe {
+
+    // pub fn new(uid: &str) -> Self {
+    //     Self {
+    //         recipe_uuid: uid.into(),
+    //         recipe_name: None,
+    //         oven_fan: None,
+    //         oven_temp: None,
+    //         oven_time: None,
+    //         ingredients: None,
+    //         notes: None,
+    //         source_book: None,
+    //         source_authors: None,
+    //         source_url: None,
+    //         steps: None,
+    //         yields: None,
+    //     }
+    // }
+
 }

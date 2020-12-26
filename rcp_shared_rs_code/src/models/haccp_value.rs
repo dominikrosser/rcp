@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Default, Debug)]
 pub struct HACCPValue {
     /* Refers to specific HACCP guidelines relevant to this step. */
     pub control_point: String,

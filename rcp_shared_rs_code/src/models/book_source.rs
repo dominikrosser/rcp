@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Default, Debug)]
 pub struct BookSource {
     /* This is a list. Refers to the author(s) of this recipe. Can be the same as source_authors, if appropriate.
      * If there was only one author, then they would be the only item in the list. */

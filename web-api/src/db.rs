@@ -3,13 +3,17 @@ use futures::StreamExt;
 use mongodb::bson::{doc, document::Document, oid::ObjectId, Bson};
 use mongodb::results::{DeleteResult, InsertOneResult, UpdateResult};
 use mongodb::{options::ClientOptions, Client, Collection};
+use std::str::FromStr;
 
-use rcp_shared_rs_code::models::ingredient::IngredientData;
 use rcp_shared_rs_code::models::recipe::Recipe;
 use rcp_shared_rs_code::models::step::Step;
 use rcp_shared_rs_code::models::temperature::Temperature;
 use rcp_shared_rs_code::models::{book_source::BookSource, ingredient::Ingredient};
 use rcp_shared_rs_code::models::{haccp_value::HACCPValue, r#yield::Yield};
+use rcp_shared_rs_code::models::{
+    ingredient::{Amount, IngredientData},
+    temperature_unit::TemperatureUnit,
+};
 
 const DB_NAME: &str = "rcp_db";
 const RECIPE_COLL: &str = "recipe";
@@ -51,7 +55,7 @@ impl DB {
 
         let mut result: Vec<Recipe> = Vec::new();
         while let Some(doc) = cursor.next().await {
-            result.push(self.doc_to_recipe(&doc?)?);
+            result.push(self.doc_to_recipe(doc?)?);
         }
         Ok(result)
     }
@@ -69,7 +73,7 @@ impl DB {
             .map_err(MongoQueryError)?;
 
         if let Some(doc) = doc {
-            self.doc_to_recipe(&doc)
+            self.doc_to_recipe(doc)
         } else {
             Err(InvalidIDError(id.to_string()))
         }
@@ -130,152 +134,226 @@ impl DB {
     }
 
     fn doc_from_recipe_request(&self, recipe_request: &RecipeRequest) -> Document {
-        let oven_time: Bson = match recipe_request.oven_time {
-            Some(t) => Bson::Double(t),
-            None => Bson::Null,
-        };
-
-        let oven_fan = match &recipe_request.oven_fan {
-            Some(ofv) => Bson::String(ofv.to_string()),
-            None => Bson::Null,
-        };
-
-        let notes: Bson = match &recipe_request.notes {
-            Some(s) => Bson::String(s.clone()),
-            None => Bson::Null,
-        };
-
-        let oven_temp = match &recipe_request.oven_temp {
-            Some(temp) => Bson::Document(self.temperature_to_doc(&temp)),
-            None => Bson::Null,
-        };
-
-        let source_book = match &recipe_request.source_book {
-            Some(bs) => Bson::Document(self.book_source_to_doc(&bs)),
-            None => Bson::Null,
-        };
-
-        let source_authors = match &recipe_request.source_authors {
-            Some(authors) => {
-                let authors: Vec<Bson> = authors.iter().map(|s| Bson::String(s.clone())).collect();
-                Bson::Array(authors)
-            }
-            None => Bson::Null,
-        };
-
-        let source_url = match &recipe_request.source_url {
-            Some(s) => Bson::String(s.clone()),
-            None => Bson::Null,
-        };
-
-        let ingredients = match &recipe_request.ingredients {
-            Some(i) => {
-                let ingredients: Vec<Bson> = i
-                    .iter()
-                    .map(|i| Bson::Document(self.ingredient_to_doc(&i)))
-                    .collect();
-
-                Bson::Array(ingredients)
-            }
-            None => Bson::Null,
-        };
-
-        let steps = match &recipe_request.steps {
-            Some(v) => Bson::Array(
-                v.iter()
-                    .map(|step| Bson::Document(self.step_to_doc(&step)))
-                    .collect(),
-            ),
-            None => Bson::Null,
-        };
-
-        let yields = match &recipe_request.yields {
-            Some(v) => Bson::Array(
-                v.iter()
-                    .map(|y| Bson::Document(self.yield_to_doc(&y)))
-                    .collect(),
-            ),
-            None => Bson::Null,
-        };
-
-        let doc: Document = doc! {
-            RECIPE_NAME: recipe_request.recipe_name.clone(),
-            OVEN_TIME: oven_time,
-            NOTES: notes,
-            OVEN_FAN: oven_fan,
-            OVEN_TEMP: oven_temp,
-            SOURCE_BOOK: source_book,
-            SOURCE_AUTHORS: source_authors,
-            SOURCE_URL: source_url,
-            INGREDIENTS: ingredients,
-            STEPS: steps,
-            YIELDS: yields,
-        };
-
+        println!("RecipeRequest to convert: {:#?}", recipe_request);
+        let doc = bson::to_document(&recipe_request).unwrap();
+        println!("Document: {:#?}", doc);
         doc
+
+        // let oven_time: Bson = match recipe_request.oven_time {
+        //     Some(t) => Bson::Double(t),
+        //     None => Bson::Null,
+        // };
+
+        // let oven_fan = match &recipe_request.oven_fan {
+        //     Some(ofv) => Bson::String(ofv.to_string()),
+        //     None => Bson::Null,
+        // };
+
+        // let notes: Bson = match &recipe_request.notes {
+        //     Some(s) => Bson::String(s.clone()),
+        //     None => Bson::Null,
+        // };
+
+        // let oven_temp = match &recipe_request.oven_temp {
+        //     Some(temp) => Bson::Document(self.temperature_to_doc(&temp)),
+        //     None => Bson::Null,
+        // };
+
+        // let source_book = match &recipe_request.source_book {
+        //     Some(bs) => Bson::Document(self.book_source_to_doc(&bs)),
+        //     None => Bson::Null,
+        // };
+
+        // let source_authors = match &recipe_request.source_authors {
+        //     Some(authors) => {
+        //         let authors: Vec<Bson> = authors.iter().map(|s| Bson::String(s.clone())).collect();
+        //         Bson::Array(authors)
+        //     }
+        //     None => Bson::Null,
+        // };
+
+        // let source_url = recipe_request
+        //     .source_url
+        //     .as_ref()
+        //     .map_or(Bson::Null, |s| Bson::String(s.clone()));
+
+        // let ingredients = match &recipe_request.ingredients {
+        //     Some(i) => {
+        //         let ingredients: Vec<Bson> = i
+        //             .iter()
+        //             .map(|i| Bson::Document(self.ingredient_to_doc(&i)))
+        //             .collect();
+
+        //         Bson::Array(ingredients)
+        //     }
+        //     None => Bson::Null,
+        // };
+
+        // let steps = match &recipe_request.steps {
+        //     Some(v) => Bson::Array(
+        //         v.iter()
+        //             .map(|step| Bson::Document(self.step_to_doc(&step)))
+        //             .collect(),
+        //     ),
+        //     None => Bson::Null,
+        // };
+
+        // let yields = match &recipe_request.yields {
+        //     Some(v) => Bson::Array(
+        //         v.iter()
+        //             .map(|y| Bson::Document(self.yield_to_doc(&y)))
+        //             .collect(),
+        //     ),
+        //     None => Bson::Null,
+        // };
+
+        // let doc: Document = doc! {
+        //     RECIPE_NAME: recipe_request.recipe_name.clone(),
+        //     OVEN_TIME: oven_time,
+        //     NOTES: notes,
+        //     OVEN_FAN: oven_fan,
+        //     OVEN_TEMP: oven_temp,
+        //     SOURCE_BOOK: source_book,
+        //     SOURCE_AUTHORS: source_authors,
+        //     SOURCE_URL: source_url,
+        //     INGREDIENTS: ingredients,
+        //     STEPS: steps,
+        //     YIELDS: yields,
+        // };
+
+        // doc
     }
 
-    fn doc_to_recipe(&self, doc: &Document) -> Result<Recipe> {
-        let recipe_uuid: &ObjectId = doc.get_object_id(RECIPE_UUID)?;
-
-        let recipe_name: Option<String> = match doc.get(RECIPE_NAME).and_then(Bson::as_str) {
-            Some(s) => Some(s.to_owned()),
-            None => None,
-        };
-
-        let oven_time: Option<f64> = doc.get(OVEN_TIME).and_then(Bson::as_f64);
-
-        let oven_fan = match doc.get(OVEN_FAN).and_then(Bson::as_str) {
-            Some(s) => OvenFanValue::from_string(s),
-            None => None,
-        };
-
-        let notes: Option<String> = match doc.get(NOTES).and_then(Bson::as_str) {
-            Some(s) => Some(s.to_owned()),
-            None => None,
-        };
-
-        let oven_temp: Option<Temperature> = match doc.get(OVEN_TEMP).and_then(Bson::as_document) {
-            Some(doc) => {
-                let temp = self.doc_to_temperature(doc);
-
-                if temp.is_ok() {
-                    // TODO: This code is ugly and could be improved
-                    Some(temp.unwrap())
-                } else {
-                    None
-                }
-            }
-            None => None,
-        };
-
-        let ingredients = None;
-
-        let source_url = None;
-
-        let source_book = None;
-
-        let source_authors = None;
-
-        let steps = None;
-
-        let yields = None;
-
-        let recipe = Recipe {
-            recipe_uuid: recipe_uuid.to_hex(),
-            recipe_name,
-            oven_time,
-            oven_fan,
-            notes,
-            oven_temp,
-            ingredients,
-            source_url,
-            source_book,
-            source_authors,
-            steps,
-            yields,
-        };
+    fn doc_to_recipe(&self, doc: Document) -> Result<Recipe> {
+        let recipe_uuid = doc.get_object_id(RECIPE_UUID)?.to_hex();
+        let req: RecipeRequest = bson::from_document(doc)?;
+        println!("Req: {:?}", req);
+        let mut recipe = Recipe::from(req);
+        recipe.recipe_uuid = recipe_uuid; 
         Ok(recipe)
+
+        // let recipe_uuid: &ObjectId = doc.get_object_id(RECIPE_UUID)?;
+
+        // let recipe_name: Option<String> = match doc.get(RECIPE_NAME).and_then(Bson::as_str) {
+        //     Some(s) => Some(s.to_owned()),
+        //     None => None,
+        // };
+
+        // let oven_time: Option<f64> = doc.get(OVEN_TIME).and_then(Bson::as_f64);
+
+        // let oven_fan = match doc.get(OVEN_FAN).and_then(Bson::as_str) {
+        //     Some(s) => OvenFanValue::from_string(s),
+        //     None => None,
+        // };
+
+        // let notes: Option<String> = match doc.get(NOTES).and_then(Bson::as_str) {
+        //     Some(s) => Some(s.to_owned()),
+        //     None => None,
+        // };
+
+        // let oven_temp: Option<Temperature> = match doc.get(OVEN_TEMP).and_then(Bson::as_document) {
+        //     Some(doc) => {
+        //         let temp = self.doc_to_temperature(doc);
+
+        //         if temp.is_ok() {
+        //             // This code is ugly and could be improved
+        //             Some(temp.unwrap())
+        //         } else {
+        //             None
+        //         }
+        //     }
+        //     None => None,
+        // };
+
+        // let ingredients: Option<Vec<Ingredient>> =
+        //     match doc.get(INGREDIENTS).and_then(Bson::as_array) {
+        //         Some(v) => {
+        //             let v: Vec<Option<&Document>> = v.iter().map(|b| b.as_document()).collect();
+
+        //             let mut ingredients: Vec<Ingredient> = vec![];
+
+        //             for doc in &v {
+        //                 if let Some(doc) = doc {
+        //                     let ingredient = self.doc_to_ingredient(doc).unwrap();
+        //                     ingredients.push(ingredient);
+        //                 }
+        //             }
+        //             Some(ingredients)
+        //         }
+        //         None => None,
+        //     };
+
+        // let source_url: Option<String> = match doc.get(SOURCE_URL).and_then(Bson::as_str) {
+        //     Some(s) => Some(s.to_owned()),
+        //     None => None,
+        // };
+
+        // let source_book: Option<BookSource> = match doc.get(SOURCE_BOOK).and_then(Bson::as_document)
+        // {
+        //     Some(d) => Some(self.doc_to_book_source(&d).unwrap()),
+        //     None => None,
+        // };
+
+        // let source_authors: Option<Vec<String>> =
+        //     match doc.get(SOURCE_AUTHORS).and_then(Bson::as_array) {
+        //         Some(v) => Some(
+        //             v.iter()
+        //                 .map(|b| {
+        //                     if let Some(s) = b.as_str() {
+        //                         s.to_string()
+        //                     } else {
+        //                         "".to_string()
+        //                     }
+        //                 })
+        //                 .collect(),
+        //         ),
+        //         None => None,
+        //     };
+
+        // let steps: Option<Vec<Step>> = doc.get(STEPS).and_then(Bson::as_array).map_or(None, |v| {
+        //     let v: Vec<Option<&Document>> = v.iter().map(|b| b.as_document()).collect();
+
+        //     let mut steps: Vec<Step> = vec![];
+
+        //     for d in &v {
+        //         if let Some(d) = d {
+        //             steps.push(self.doc_to_step(d).unwrap());
+        //         }
+        //     }
+
+        //     Some(steps)
+        // });
+
+        // let yields: Option<Vec<Yield>> =
+        //     doc.get(YIELDS).and_then(Bson::as_array).map_or(None, |v| {
+        //         let v: Vec<Option<&Document>> = v.iter().map(|b| b.as_document()).collect();
+
+        //         let mut yields: Vec<Yield> = vec![];
+
+        //         for d in &v {
+        //             if let Some(d) = d {
+        //                 yields.push(self.doc_to_yield(d).unwrap());
+        //             }
+        //         }
+
+        //         Some(yields)
+        //     });
+
+        // let recipe = Recipe {
+        //     recipe_uuid: recipe_uuid.to_hex(),
+        //     recipe_name,
+        //     oven_time,
+        //     oven_fan,
+        //     notes,
+        //     oven_temp,
+        //     ingredients,
+        //     source_url,
+        //     source_book,
+        //     source_authors,
+        //     steps,
+        //     yields,
+        // };
+        // Ok(recipe)
     }
 
     fn ingredient_to_doc(&self, i: &Ingredient) -> Document {
@@ -298,9 +376,26 @@ impl DB {
     }
 
     fn doc_to_ingredient(&self, doc: &Document) -> Result<Ingredient> {
-        let ing_data = unimplemented!(); // TODO
+        let ing_data_doc: &Document = doc.get("ingredient").and_then(Bson::as_document).unwrap();
+        let ing_data = self.doc_to_ingredient_data(ing_data_doc)?;
 
-        let substitutions = unimplemented!(); // TODO
+        let substitutions: Option<Vec<IngredientData>> = doc
+            .get("substitutions")
+            .and_then(Bson::as_array)
+            .map_or(None, |v| {
+                let v: Vec<Option<&Document>> = v.iter().map(|b| b.as_document()).collect();
+
+                let mut subs: Vec<IngredientData> = vec![];
+
+                for d in &v {
+                    if let Some(d) = d {
+                        let ing_data = self.doc_to_ingredient_data(d).unwrap();
+                        subs.push(ing_data);
+                    }
+                }
+
+                Some(subs)
+            });
 
         let ing = Ingredient {
             ingredient: ing_data,
@@ -325,20 +420,73 @@ impl DB {
                 },
                 None => Bson::Null,
             },
-            "processing": Bson::Null,
+            "processing": ing_data.processing.as_ref().map_or(Bson::Null, |v| {
+                let v: Vec<Bson> = v.iter().map(|s| Bson::String(s.clone())).collect();
+                Bson::Array(v)
+            }),
+            "notes": ing_data.notes.as_ref().map_or(Bson::Null, |s| Bson::String(s.clone())),
+            "ingredient_name": ing_data.ingredient_name.as_ref().map_or(Bson::Null, |s| Bson::String(s.clone())),
         };
 
         doc
     }
 
     fn doc_to_ingredient_data(&self, doc: &Document) -> Result<IngredientData> {
-        let amounts = unimplemented!(); // TODO
+        let amounts = doc
+            .get("amounts")
+            .and_then(Bson::as_array)
+            .map_or(None, |v| {
+                let v: Vec<Option<&Document>> = v.iter().map(|b| b.as_document()).collect();
 
-        let processing = unimplemented!(); // TODO
+                let mut amounts: Vec<Amount> = vec![];
 
-        let notes = unimplemented!(); // TODO
+                for d in &v {
+                    if let Some(d) = d {
+                        let a: f64 = d.get("amount").and_then(Bson::as_f64).unwrap();
+                        let u: String = d.get("unit").and_then(Bson::as_str).unwrap().to_string();
 
-        let ingredient_name = unimplemented!(); // TODO
+                        let amount = Amount { amount: a, unit: u };
+                        amounts.push(amount);
+                    }
+                }
+
+                if amounts.is_empty() {
+                    None
+                } else {
+                    Some(amounts)
+                }
+            });
+
+        let processing = doc
+            .get("processing")
+            .and_then(Bson::as_array)
+            .map_or(None, |v| {
+                let v: Vec<Option<&str>> = v.iter().map(|b| b.as_str()).collect();
+
+                let mut processings: Vec<String> = vec![];
+
+                for s in &v {
+                    if let Some(s) = s {
+                        processings.push(s.to_string());
+                    }
+                }
+
+                if processings.is_empty() {
+                    None
+                } else {
+                    Some(processings)
+                }
+            });
+
+        let notes = doc
+            .get("notes")
+            .and_then(Bson::as_str)
+            .map_or(None, |s| Some(s.to_string()));
+
+        let ingredient_name = doc
+            .get("ingredient_name")
+            .and_then(Bson::as_str)
+            .map_or(None, |s| Some(s.to_string()));
 
         let ing_data = IngredientData {
             amounts,
@@ -352,27 +500,30 @@ impl DB {
 
     fn step_to_doc(&self, step: &Step) -> Document {
         let doc = doc! {
-
             "step": Bson::String(step.step.clone()),
-            "haccp": match &step.haccp {
-                Some(haccp_value) => Bson::Document(self.haccp_value_to_doc(&haccp_value)),
-                None => Bson::Null,
-            },
-            "notes": match &step.notes {
-                Some(notes) => Bson::String(notes.clone()),
-                None => Bson::Null,
-            },
+            "haccp": step.haccp.as_ref().map_or(Bson::Null, |v| Bson::Document(self.haccp_value_to_doc(&v))),
+            "notes": step.notes.as_ref().map_or(Bson::Null, |s| Bson::String(s.clone())),
         };
 
         doc
     }
 
     fn doc_to_step(&self, doc: &Document) -> Result<Step> {
-        let step = unimplemented!(); //TODO
+        let step = doc
+            .get("step")
+            .and_then(Bson::as_str)
+            .map_or(None, |s| Some(s.to_string()))
+            .unwrap();
 
-        let haccp = unimplemented!(); //TODO
+        let haccp = doc
+            .get("haccp")
+            .and_then(Bson::as_document)
+            .map_or(None, |d| Some(self.doc_to_haccp_value(d).unwrap()));
 
-        let notes = unimplemented!(); //TODO
+        let notes = doc
+            .get("notes")
+            .and_then(Bson::as_str)
+            .map_or(None, |s| Some(s.to_string()));
 
         let step = Step { step, haccp, notes };
 
@@ -387,9 +538,17 @@ impl DB {
     }
 
     fn doc_to_haccp_value(&self, doc: &Document) -> Result<HACCPValue> {
-        let control_point = unimplemented!(); //TODO
+        let control_point = doc
+            .get("control_point")
+            .and_then(Bson::as_str)
+            .map_or(None, |s| Some(s.to_string()))
+            .unwrap();
 
-        let critical_control_point = unimplemented!(); //TODO
+        let critical_control_point = doc
+            .get("critical_control_point")
+            .and_then(Bson::as_str)
+            .map_or(None, |s| Some(s.to_string()))
+            .unwrap();
 
         let haccp_value = HACCPValue {
             control_point,
@@ -407,9 +566,13 @@ impl DB {
     }
 
     fn doc_to_yield(&self, doc: &Document) -> Result<Yield> {
-        let amount = unimplemented!(); //TODO
+        let amount = doc.get("amount").and_then(Bson::as_f64).unwrap();
 
-        let unit = unimplemented!(); //TODO
+        let unit = doc
+            .get("unit")
+            .and_then(Bson::as_str)
+            .map_or(None, |s| Some(s.to_string()))
+            .unwrap();
 
         let r#yield = Yield { amount, unit };
 
@@ -424,9 +587,11 @@ impl DB {
     }
 
     fn doc_to_temperature(&self, doc: &Document) -> Result<Temperature> {
-        let amount = unimplemented!(); // TODO
+        let amount = doc.get("amount").and_then(Bson::as_f64).expect("Error finding amount or converting to f64");
 
-        let unit = unimplemented!(); //TODO
+        let unit_str = doc.get("unit").and_then(Bson::as_str).expect("Error finding TemperatureUnit String");
+
+        let unit = TemperatureUnit::from_str(unit_str).expect("Error converting TemperatureUnit to String");
 
         let t = Temperature { amount, unit };
 
@@ -439,14 +604,8 @@ impl DB {
         doc! {
             "authors": Bson::Array(authors),
             "title": Bson::String(bs.title.clone()),
-            "isbn": match &bs.isbn {
-                Some(s) => Bson::String(s.clone()),
-                None => Bson::Null,
-            },
-            "notes": match &bs.notes {
-                Some(s) => Bson::String(s.clone()),
-                None => Bson::Null,
-            },
+            "isbn": bs.isbn.as_ref().map_or(Bson::Null, |s| Bson::String(s.clone())),
+            "notes": bs.notes.as_ref().map_or(Bson::Null, |s| Bson::String(s.clone())),
         }
     }
 

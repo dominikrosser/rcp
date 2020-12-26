@@ -9,7 +9,7 @@ use super::temperature::Temperature;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RecipeRequest {
-    pub recipe_name: String,
+    pub recipe_name: Option<String>,
     pub oven_time: Option<f64>,
     pub notes: Option<String>,
     pub oven_fan: Option<OvenFanValue>,

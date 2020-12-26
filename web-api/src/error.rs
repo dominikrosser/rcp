@@ -14,6 +14,14 @@ pub enum Error {
     MongoDataError(#[from] bson::document::ValueAccessError),
     #[error("invalid id used: {0}")]
     InvalidIDError(String),
+    #[error("bson conversion error: {0}")]
+    BsonConversionError(bson::de::Error)
+}
+
+impl From<bson::de::Error> for Error {
+    fn from(err: bson::de::Error) -> Self {
+        Error::BsonConversionError(err)
+    }
 }
 
 #[derive(Serialize)]

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 // A dict of items, describing an ingredient, and how much of that ingredient to use.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Default, Debug)]
 pub struct Ingredient {
     // Wrapper enclosing the relevant data
     pub ingredient: IngredientData,
@@ -11,13 +11,13 @@ pub struct Ingredient {
     pub substitutions: Option<Vec<IngredientData>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Default, Debug)]
 pub struct Amount {
     pub amount: f64,
     pub unit: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Default, Debug)]
 pub struct IngredientData {
     /* A list of dicts which describe the amounts to use. Normally, the list will only contain one dict.
      * In cases where multiple yields need to be stored (i.e. 50 cookies vs 100 cookes vs 250 cookies),

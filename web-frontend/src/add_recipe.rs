@@ -7,6 +7,7 @@ use yew::format::{Json, Nothing};
 use yew::prelude::*;
 use yew::services::fetch::{FetchService, FetchTask, Request, Response};
 use yew_router::{route::Route, service::RouteService, Switch};
+use std::str::FromStr;
 
 use rcp_shared_rs_code::models::oven_fan_value::OvenFanValue;
 
@@ -127,7 +128,7 @@ impl Component for AddRecipeComp {
                 true
             }
             Msg::RecipeOvenFanSelectChanged(oven_fan) => {
-                self.state.recipe_data.oven_fan = OvenFanValue::from_string(&oven_fan);
+                self.state.recipe_data.oven_fan = OvenFanValue::from_str(&oven_fan).ok();
                 true
             }
         }
