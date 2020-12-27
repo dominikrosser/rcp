@@ -65,7 +65,7 @@ impl Component for RecipeComp {
     type Properties = Props;
 
     fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        let recipe = Recipe::new(&props.recipe_uuid);
+        let recipe = Recipe { recipe_uuid: props.recipe_uuid, ..Default::default() };
 
         let mut recipe_comp = Self {
             link,

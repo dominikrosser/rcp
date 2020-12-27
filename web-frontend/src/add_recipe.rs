@@ -3,6 +3,7 @@ use serde_json::json;
 use yew::agent::{Dispatched, Dispatcher};
 use yew::callback::Callback;
 use yew::events::ChangeData;
+use yew::events::MouseEvent;
 use yew::format::{Json, Nothing};
 use yew::prelude::*;
 use yew::services::fetch::{FetchService, FetchTask, Request, Response};
@@ -10,10 +11,12 @@ use yew_router::{route::Route, service::RouteService, Switch};
 use std::str::FromStr;
 
 use rcp_shared_rs_code::models::oven_fan_value::OvenFanValue;
+use rcp_shared_rs_code::models::temperature::Temperature;
+use rcp_shared_rs_code::models::temperature_unit::TemperatureUnit;
+use rcp_shared_rs_code::models::recipe_request::RecipeRequest;
 
 use crate::app::RouteServiceType;
 use crate::app::RouteType;
-use crate::recipe::RecipeRequest;
 use crate::reroute_agent::{RerouteAgent, RerouteRequestMsg};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -36,12 +39,7 @@ pub struct State {
 
 impl State {
     fn new() -> Self {
-        let recipe_data: RecipeRequest = RecipeRequest {
-            recipe_name: None,
-            oven_time: None,
-            oven_fan: None,
-            notes: None,
-        };
+        let recipe_data: RecipeRequest = Default::default();
 
         State {
             post_recipes_task: None,
@@ -60,6 +58,17 @@ pub enum Msg {
     RecipeOvenTimeInputChanged(String),
     RecipeNotesInputChanged(String),
     RecipeOvenFanSelectChanged(String),
+    RecipeOvenTempAmountInputChanged(String),//TODO
+    RecipeOvenTempUnitInputChanged(String),//TODO
+    // SOURCE BOOK
+    // SOURCE AUTHORS
+    RecipeSourceUrlInputChanged(String),//TODO
+    // INGREDIENTS
+    OnAddIngredients,
+    // STEPS
+    OnAddSteps,
+    // YIELDS
+    OnAddYields,
 }
 
 impl Component for AddRecipeComp {
@@ -90,7 +99,7 @@ impl Component for AddRecipeComp {
                 self.state.post_recipes_task = Some(task);
 
                 true
-            }
+            },
             Msg::ReceivePostResponse(data) => {
                 self.state.recipe_data.recipe_name = None;
                 self.state.recipe_data.oven_time = None;
@@ -112,25 +121,50 @@ impl Component for AddRecipeComp {
                 }
 
                 true
-            }
-
+            },
             Msg::RecipeNameInputChanged(recipe_name) => {
                 self.state.recipe_data.recipe_name = Some(recipe_name);
                 true
-            }
+            },
             Msg::RecipeOvenTimeInputChanged(oven_time) => {
                 let oven_time: f64 = oven_time.parse::<f64>().unwrap();
                 self.state.recipe_data.oven_time = Some(oven_time);
                 true
-            }
+            },
             Msg::RecipeNotesInputChanged(notes) => {
                 self.state.recipe_data.notes = Some(notes);
                 true
-            }
+            },
             Msg::RecipeOvenFanSelectChanged(oven_fan) => {
                 self.state.recipe_data.oven_fan = OvenFanValue::from_str(&oven_fan).ok();
                 true
-            }
+            },
+            Msg::RecipeOvenTempAmountInputChanged(amount_str) => {
+                let amount: f64 = amount_str.parse().unwrap_or(0.0f64);
+                self.state.recipe_data.oven_temp = self.state.recipe_data.oven_temp.as_ref().map_or(None, |temp| Some(Temperature { amount: amount, unit: temp.unit.clone() }));
+                true
+            },
+            Msg::RecipeOvenTempUnitInputChanged(unit_str) => {
+                let unit = TemperatureUnit::from_str(&unit_str).unwrap();
+                self.state.recipe_data.oven_temp = self.state.recipe_data.oven_temp.as_ref().map_or(None, |temp| Some(Temperature { amount: temp.amount, unit: unit }));
+                true
+            },
+            Msg::RecipeSourceUrlInputChanged(source_url_str) => {
+                self.state.recipe_data.source_url = Some(source_url_str);
+                true
+            },
+            Msg::OnAddYields => {
+                self.state.recipe_data.yields = Some(Default::default());
+                true
+            },
+            Msg::OnAddSteps => {
+                self.state.recipe_data.steps = Some(Default::default());
+                true
+            },
+            Msg::OnAddIngredients => {
+                self.state.recipe_data.ingredients = Some(Default::default());
+                true
+            },
         }
     }
 
@@ -154,64 +188,14 @@ impl Component for AddRecipeComp {
                 <h2>{"Add Recipe"}</h2>
 
                 <form class="ui form">
-                    <div class="field">
-                        <label for="recipe_name_input">{"recipe_name: "}</label>
-                        <input
-                            type="text",
-                            id="recipe_name_input"
-                            value=match &self.state.recipe_data.recipe_name {
-                                None => "",
-                                Some(name) => name,
-                            },
-                            oninput=self.link.callback(|e: InputData| Msg::RecipeNameInputChanged(e.value))
-                            />
-                    </div>
-
-                    <div class="field">
-                        <label for="oven_time_input">{"oven_time: "}</label>
-                        <input
-                            type="number"
-                            id="oven_time_input"
-                            value=match &self.state.recipe_data.oven_time {
-                                None => "".to_string(),
-                                Some(t) => t.to_string(),
-                            },
-                            oninput=self.link.callback(|e: InputData| Msg::RecipeOvenTimeInputChanged(e.value))
-                            />
-                    </div>
-
-                    <div class="field">
-                        <label for="notes_input">{"notes: "}</label>
-                        <textarea
-                            rows=4,
-                            type="text",
-                            id="notes_input",
-                            value=match &self.state.recipe_data.notes {
-                                None => "",
-                                Some(s) => s,
-                            },
-                            oninput=self.link.callback(|e: InputData| Msg::RecipeNotesInputChanged(e.value))
-                            />
-                    </div>
-
-                    <div class="field">
-                        <label for="oven_fan_select">{"oven_fan: "}</label>
-                        <select
-                            name="oven_fan",
-                            id="oven_fan_select",
-                            value={if let Some(of) = &self.state.recipe_data.oven_fan { OvenFanValue::to_string(of) } else { "".to_string() }},
-                            onchange=self.link.callback(|e: ChangeData| Msg::RecipeOvenFanSelectChanged(match e {
-                                ChangeData::Select(selElement) => selElement.value(),
-                                _ => "".to_string(),
-                            }))
-                            >
-                            <option value="">{"-"}</option>
-                            <option value="Off">{"Off"}</option>
-                            <option value="Low">{"Low"}</option>
-                            <option value="High">{"High"}</option>
-                        </select>
-                    </div>
-
+                    { self.view_recipe_name_input() }
+                    { self.view_oven_time_input() }
+                    { self.view_notes_input() }
+                    { self.view_oven_fan_input() }
+                    { self.view_steps_input() }
+                    { self.view_yields_input() }
+                    { self.view_ingredients_input() }
+                    { self.view_oven_temp_input() }
                     { self.view_submit_recipe_button() }
                 </form>
 
@@ -250,6 +234,149 @@ impl AddRecipeComp {
             <button class="ui button" type="submit" onclick=self.link.callback(|_| Msg::AddRecipe)>
                 { "Submit" }
             </button>
+        }
+    }
+
+    fn view_oven_temp_input(&self) -> Html {
+        match &self.state.recipe_data.oven_temp {
+            None => html!{},
+            Some(temp) => {
+                let on_oven_temp_amount_input = self.link.callback(|e: InputData| {
+                        Msg::RecipeOvenTempAmountInputChanged(e.value)
+                    });
+
+                html! {
+                    
+                    <div class="field">
+                        <label for="oven_temp_amount_input">{"oven_temp_amount: "}</label>
+                        <input
+                            type="number"
+                            id="oven_temp_amount_input"
+                            value=temp.amount,
+                            oninput=on_oven_temp_amount_input,
+                            />
+
+                    </div>
+                }
+            }
+        }
+    }
+
+    fn view_oven_fan_input(&self) -> Html {
+        html! {
+            <div class="field">
+                <label for="oven_fan_select">{"oven_fan: "}</label>
+                <select
+                    name="oven_fan",
+                    id="oven_fan_select",
+                    value={if let Some(of) = &self.state.recipe_data.oven_fan { OvenFanValue::to_string(of) } else { "".to_string() }},
+                    onchange=self.link.callback(|e: ChangeData| Msg::RecipeOvenFanSelectChanged(match e {
+                        ChangeData::Select(selElement) => selElement.value(),
+                        _ => "".to_string(),
+                    }))
+                    >
+                    <option value="">{"-"}</option>
+                    <option value="Off">{"Off"}</option>
+                    <option value="Low">{"Low"}</option>
+                    <option value="High">{"High"}</option>
+                </select>
+            </div>
+        }
+    }
+
+    fn view_notes_input(&self) -> Html {
+        html! {
+            <div class="field">
+                <label for="notes_input">{"notes: "}</label>
+                <textarea
+                    rows=4,
+                    type="text",
+                    id="notes_input",
+                    value=match &self.state.recipe_data.notes {
+                        None => "",
+                        Some(s) => s,
+                    },
+                    oninput=self.link.callback(|e: InputData| Msg::RecipeNotesInputChanged(e.value))
+                    />
+            </div>
+        }
+    }
+
+    fn view_oven_time_input(&self) -> Html {
+        html! {
+            <div class="field">
+                <label for="oven_time_input">{"oven_time: "}</label>
+                <input
+                    type="number"
+                    id="oven_time_input"
+                    value=match &self.state.recipe_data.oven_time {
+                        None => "".to_string(),
+                        Some(t) => t.to_string(),
+                    },
+                    oninput=self.link.callback(|e: InputData| Msg::RecipeOvenTimeInputChanged(e.value))
+                    />
+            </div>
+        }
+    }
+
+    fn view_recipe_name_input(&self) -> Html {
+        html! {
+            <div class="field">
+                <label for="recipe_name_input">{"recipe_name: "}</label>
+                <input
+                    type="text",
+                    id="recipe_name_input"
+                    value=match &self.state.recipe_data.recipe_name {
+                        None => "",
+                        Some(name) => name,
+                    },
+                    oninput=self.link.callback(|e: InputData| Msg::RecipeNameInputChanged(e.value))
+                    />
+            </div>
+        }
+    }
+    
+    fn view_steps_input(&self) -> Html {
+        if self.state.recipe_data.steps.is_some() {
+            html! {
+
+            }
+        } else {
+            html! {
+                { self.view_add_btn("Add Steps", |_| Msg::OnAddSteps) }
+            }
+        }
+    }
+
+    fn view_ingredients_input(&self) -> Html {
+        if self.state.recipe_data.ingredients.is_some() {
+            html! {
+                
+            }
+        } else {
+            html! {
+                { self.view_add_btn("Add Ingredients", |_| Msg::OnAddIngredients) }
+            }
+        }
+    }
+
+    fn view_add_btn<P: 'static>(&self, text: &str, cb: P) -> Html where
+        P: Fn(MouseEvent) -> Msg {
+        html! {
+            <button class="ui teal labeled icon button" onclick=self.link.callback(cb)>
+                {text}
+                <i class="add icon"></i>
+            </button>
+        }
+    }
+
+    fn view_yields_input(&self) -> Html {
+        if self.state.recipe_data.yields.is_some() {
+            html! {}
+        } else {
+            html! {
+                { self.view_add_btn("Add Yields", |_| Msg::OnAddYields) }
+            }
         }
     }
 }

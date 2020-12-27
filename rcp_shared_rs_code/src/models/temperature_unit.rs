@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 pub use std::str::FromStr;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum TemperatureUnit {
     Celsius,
     Fahrenheit,

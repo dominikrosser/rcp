@@ -356,274 +356,274 @@ impl DB {
         // Ok(recipe)
     }
 
-    fn ingredient_to_doc(&self, i: &Ingredient) -> Document {
-        let substitutions = match &i.substitutions {
-            Some(v) => {
-                let subs = v
-                    .iter()
-                    .map(|d| Bson::Document(self.ingredient_data_to_doc(&d)))
-                    .collect();
+    // fn ingredient_to_doc(&self, i: &Ingredient) -> Document {
+    //     let substitutions = match &i.substitutions {
+    //         Some(v) => {
+    //             let subs = v
+    //                 .iter()
+    //                 .map(|d| Bson::Document(self.ingredient_data_to_doc(&d)))
+    //                 .collect();
 
-                Bson::Array(subs)
-            }
-            None => Bson::Null,
-        };
+    //             Bson::Array(subs)
+    //         }
+    //         None => Bson::Null,
+    //     };
 
-        doc! {
-            "ingredient": self.ingredient_data_to_doc(&i.ingredient),
-            "substitutions": substitutions,
-        }
-    }
+    //     doc! {
+    //         "ingredient": self.ingredient_data_to_doc(&i.ingredient),
+    //         "substitutions": substitutions,
+    //     }
+    // }
 
-    fn doc_to_ingredient(&self, doc: &Document) -> Result<Ingredient> {
-        let ing_data_doc: &Document = doc.get("ingredient").and_then(Bson::as_document).unwrap();
-        let ing_data = self.doc_to_ingredient_data(ing_data_doc)?;
+    // fn doc_to_ingredient(&self, doc: &Document) -> Result<Ingredient> {
+    //     let ing_data_doc: &Document = doc.get("ingredient").and_then(Bson::as_document).unwrap();
+    //     let ing_data = self.doc_to_ingredient_data(ing_data_doc)?;
 
-        let substitutions: Option<Vec<IngredientData>> = doc
-            .get("substitutions")
-            .and_then(Bson::as_array)
-            .map_or(None, |v| {
-                let v: Vec<Option<&Document>> = v.iter().map(|b| b.as_document()).collect();
+    //     let substitutions: Option<Vec<IngredientData>> = doc
+    //         .get("substitutions")
+    //         .and_then(Bson::as_array)
+    //         .map_or(None, |v| {
+    //             let v: Vec<Option<&Document>> = v.iter().map(|b| b.as_document()).collect();
 
-                let mut subs: Vec<IngredientData> = vec![];
+    //             let mut subs: Vec<IngredientData> = vec![];
 
-                for d in &v {
-                    if let Some(d) = d {
-                        let ing_data = self.doc_to_ingredient_data(d).unwrap();
-                        subs.push(ing_data);
-                    }
-                }
+    //             for d in &v {
+    //                 if let Some(d) = d {
+    //                     let ing_data = self.doc_to_ingredient_data(d).unwrap();
+    //                     subs.push(ing_data);
+    //                 }
+    //             }
 
-                Some(subs)
-            });
+    //             Some(subs)
+    //         });
 
-        let ing = Ingredient {
-            ingredient: ing_data,
-            substitutions,
-        };
+    //     let ing = Ingredient {
+    //         ingredient: ing_data,
+    //         substitutions,
+    //     };
 
-        Ok(ing)
-    }
+    //     Ok(ing)
+    // }
 
-    fn ingredient_data_to_doc(&self, ing_data: &IngredientData) -> Document {
-        let doc = doc! {
-            "amounts": match &ing_data.amounts {
-                Some(amounts) => {
-                    let amounts = amounts.iter().map(|a| {
-                            Bson::Document(doc! {
-                                "amount": Bson::Double(a.amount),
-                                "unit": Bson::String(a.unit.clone()),
-                            })
-                        }).collect();
+    // fn ingredient_data_to_doc(&self, ing_data: &IngredientData) -> Document {
+    //     let doc = doc! {
+    //         "amounts": match &ing_data.amounts {
+    //             Some(amounts) => {
+    //                 let amounts = amounts.iter().map(|a| {
+    //                         Bson::Document(doc! {
+    //                             "amount": Bson::Double(a.amount),
+    //                             "unit": Bson::String(a.unit.clone()),
+    //                         })
+    //                     }).collect();
 
-                    Bson::Array(amounts)
-                },
-                None => Bson::Null,
-            },
-            "processing": ing_data.processing.as_ref().map_or(Bson::Null, |v| {
-                let v: Vec<Bson> = v.iter().map(|s| Bson::String(s.clone())).collect();
-                Bson::Array(v)
-            }),
-            "notes": ing_data.notes.as_ref().map_or(Bson::Null, |s| Bson::String(s.clone())),
-            "ingredient_name": ing_data.ingredient_name.as_ref().map_or(Bson::Null, |s| Bson::String(s.clone())),
-        };
+    //                 Bson::Array(amounts)
+    //             },
+    //             None => Bson::Null,
+    //         },
+    //         "processing": ing_data.processing.as_ref().map_or(Bson::Null, |v| {
+    //             let v: Vec<Bson> = v.iter().map(|s| Bson::String(s.clone())).collect();
+    //             Bson::Array(v)
+    //         }),
+    //         "notes": ing_data.notes.as_ref().map_or(Bson::Null, |s| Bson::String(s.clone())),
+    //         "ingredient_name": ing_data.ingredient_name.as_ref().map_or(Bson::Null, |s| Bson::String(s.clone())),
+    //     };
 
-        doc
-    }
+    //     doc
+    // }
 
-    fn doc_to_ingredient_data(&self, doc: &Document) -> Result<IngredientData> {
-        let amounts = doc
-            .get("amounts")
-            .and_then(Bson::as_array)
-            .map_or(None, |v| {
-                let v: Vec<Option<&Document>> = v.iter().map(|b| b.as_document()).collect();
+    // fn doc_to_ingredient_data(&self, doc: &Document) -> Result<IngredientData> {
+    //     let amounts = doc
+    //         .get("amounts")
+    //         .and_then(Bson::as_array)
+    //         .map_or(None, |v| {
+    //             let v: Vec<Option<&Document>> = v.iter().map(|b| b.as_document()).collect();
 
-                let mut amounts: Vec<Amount> = vec![];
+    //             let mut amounts: Vec<Amount> = vec![];
 
-                for d in &v {
-                    if let Some(d) = d {
-                        let a: f64 = d.get("amount").and_then(Bson::as_f64).unwrap();
-                        let u: String = d.get("unit").and_then(Bson::as_str).unwrap().to_string();
+    //             for d in &v {
+    //                 if let Some(d) = d {
+    //                     let a: f64 = d.get("amount").and_then(Bson::as_f64).unwrap();
+    //                     let u: String = d.get("unit").and_then(Bson::as_str).unwrap().to_string();
 
-                        let amount = Amount { amount: a, unit: u };
-                        amounts.push(amount);
-                    }
-                }
+    //                     let amount = Amount { amount: a, unit: u };
+    //                     amounts.push(amount);
+    //                 }
+    //             }
 
-                if amounts.is_empty() {
-                    None
-                } else {
-                    Some(amounts)
-                }
-            });
+    //             if amounts.is_empty() {
+    //                 None
+    //             } else {
+    //                 Some(amounts)
+    //             }
+    //         });
 
-        let processing = doc
-            .get("processing")
-            .and_then(Bson::as_array)
-            .map_or(None, |v| {
-                let v: Vec<Option<&str>> = v.iter().map(|b| b.as_str()).collect();
+    //     let processing = doc
+    //         .get("processing")
+    //         .and_then(Bson::as_array)
+    //         .map_or(None, |v| {
+    //             let v: Vec<Option<&str>> = v.iter().map(|b| b.as_str()).collect();
 
-                let mut processings: Vec<String> = vec![];
+    //             let mut processings: Vec<String> = vec![];
 
-                for s in &v {
-                    if let Some(s) = s {
-                        processings.push(s.to_string());
-                    }
-                }
+    //             for s in &v {
+    //                 if let Some(s) = s {
+    //                     processings.push(s.to_string());
+    //                 }
+    //             }
 
-                if processings.is_empty() {
-                    None
-                } else {
-                    Some(processings)
-                }
-            });
+    //             if processings.is_empty() {
+    //                 None
+    //             } else {
+    //                 Some(processings)
+    //             }
+    //         });
 
-        let notes = doc
-            .get("notes")
-            .and_then(Bson::as_str)
-            .map_or(None, |s| Some(s.to_string()));
+    //     let notes = doc
+    //         .get("notes")
+    //         .and_then(Bson::as_str)
+    //         .map_or(None, |s| Some(s.to_string()));
 
-        let ingredient_name = doc
-            .get("ingredient_name")
-            .and_then(Bson::as_str)
-            .map_or(None, |s| Some(s.to_string()));
+    //     let ingredient_name = doc
+    //         .get("ingredient_name")
+    //         .and_then(Bson::as_str)
+    //         .map_or(None, |s| Some(s.to_string()));
 
-        let ing_data = IngredientData {
-            amounts,
-            processing,
-            notes,
-            ingredient_name,
-        };
+    //     let ing_data = IngredientData {
+    //         amounts,
+    //         processing,
+    //         notes,
+    //         ingredient_name,
+    //     };
 
-        Ok(ing_data)
-    }
+    //     Ok(ing_data)
+    // }
 
-    fn step_to_doc(&self, step: &Step) -> Document {
-        let doc = doc! {
-            "step": Bson::String(step.step.clone()),
-            "haccp": step.haccp.as_ref().map_or(Bson::Null, |v| Bson::Document(self.haccp_value_to_doc(&v))),
-            "notes": step.notes.as_ref().map_or(Bson::Null, |s| Bson::String(s.clone())),
-        };
+    // fn step_to_doc(&self, step: &Step) -> Document {
+    //     let doc = doc! {
+    //         "step": Bson::String(step.step.clone()),
+    //         "haccp": step.haccp.as_ref().map_or(Bson::Null, |v| Bson::Document(self.haccp_value_to_doc(&v))),
+    //         "notes": step.notes.as_ref().map_or(Bson::Null, |s| Bson::String(s.clone())),
+    //     };
 
-        doc
-    }
+    //     doc
+    // }
 
-    fn doc_to_step(&self, doc: &Document) -> Result<Step> {
-        let step = doc
-            .get("step")
-            .and_then(Bson::as_str)
-            .map_or(None, |s| Some(s.to_string()))
-            .unwrap();
+    // fn doc_to_step(&self, doc: &Document) -> Result<Step> {
+    //     let step = doc
+    //         .get("step")
+    //         .and_then(Bson::as_str)
+    //         .map_or(None, |s| Some(s.to_string()))
+    //         .unwrap();
 
-        let haccp = doc
-            .get("haccp")
-            .and_then(Bson::as_document)
-            .map_or(None, |d| Some(self.doc_to_haccp_value(d).unwrap()));
+    //     let haccp = doc
+    //         .get("haccp")
+    //         .and_then(Bson::as_document)
+    //         .map_or(None, |d| Some(self.doc_to_haccp_value(d).unwrap()));
 
-        let notes = doc
-            .get("notes")
-            .and_then(Bson::as_str)
-            .map_or(None, |s| Some(s.to_string()));
+    //     let notes = doc
+    //         .get("notes")
+    //         .and_then(Bson::as_str)
+    //         .map_or(None, |s| Some(s.to_string()));
 
-        let step = Step { step, haccp, notes };
+    //     let step = Step { step, haccp, notes };
 
-        Ok(step)
-    }
+    //     Ok(step)
+    // }
 
-    fn haccp_value_to_doc(&self, hv: &HACCPValue) -> Document {
-        doc! {
-            "control_point": Bson::String(hv.control_point.clone()),
-            "critical_control_point": Bson::String(hv.critical_control_point.clone()),
-        }
-    }
+    // fn haccp_value_to_doc(&self, hv: &HACCPValue) -> Document {
+    //     doc! {
+    //         "control_point": Bson::String(hv.control_point.clone()),
+    //         "critical_control_point": Bson::String(hv.critical_control_point.clone()),
+    //     }
+    // }
 
-    fn doc_to_haccp_value(&self, doc: &Document) -> Result<HACCPValue> {
-        let control_point = doc
-            .get("control_point")
-            .and_then(Bson::as_str)
-            .map_or(None, |s| Some(s.to_string()))
-            .unwrap();
+    // fn doc_to_haccp_value(&self, doc: &Document) -> Result<HACCPValue> {
+    //     let control_point = doc
+    //         .get("control_point")
+    //         .and_then(Bson::as_str)
+    //         .map_or(None, |s| Some(s.to_string()))
+    //         .unwrap();
 
-        let critical_control_point = doc
-            .get("critical_control_point")
-            .and_then(Bson::as_str)
-            .map_or(None, |s| Some(s.to_string()))
-            .unwrap();
+    //     let critical_control_point = doc
+    //         .get("critical_control_point")
+    //         .and_then(Bson::as_str)
+    //         .map_or(None, |s| Some(s.to_string()))
+    //         .unwrap();
 
-        let haccp_value = HACCPValue {
-            control_point,
-            critical_control_point,
-        };
+    //     let haccp_value = HACCPValue {
+    //         control_point,
+    //         critical_control_point,
+    //     };
 
-        Ok(haccp_value)
-    }
+    //     Ok(haccp_value)
+    // }
 
-    fn yield_to_doc(&self, y: &Yield) -> Document {
-        doc! {
-            "amount": Bson::Double(y.amount),
-            "unit": Bson::String(y.unit.clone()),
-        }
-    }
+    // fn yield_to_doc(&self, y: &Yield) -> Document {
+    //     doc! {
+    //         "amount": Bson::Double(y.amount),
+    //         "unit": Bson::String(y.unit.clone()),
+    //     }
+    // }
 
-    fn doc_to_yield(&self, doc: &Document) -> Result<Yield> {
-        let amount = doc.get("amount").and_then(Bson::as_f64).unwrap();
+    // fn doc_to_yield(&self, doc: &Document) -> Result<Yield> {
+    //     let amount = doc.get("amount").and_then(Bson::as_f64).unwrap();
 
-        let unit = doc
-            .get("unit")
-            .and_then(Bson::as_str)
-            .map_or(None, |s| Some(s.to_string()))
-            .unwrap();
+    //     let unit = doc
+    //         .get("unit")
+    //         .and_then(Bson::as_str)
+    //         .map_or(None, |s| Some(s.to_string()))
+    //         .unwrap();
 
-        let r#yield = Yield { amount, unit };
+    //     let r#yield = Yield { amount, unit };
 
-        Ok(r#yield)
-    }
+    //     Ok(r#yield)
+    // }
 
-    fn temperature_to_doc(&self, t: &Temperature) -> Document {
-        doc! {
-            "amount": Bson::Double(t.amount),
-            "unit": Bson::String(t.unit.to_string()),
-        }
-    }
+    // fn temperature_to_doc(&self, t: &Temperature) -> Document {
+    //     doc! {
+    //         "amount": Bson::Double(t.amount),
+    //         "unit": Bson::String(t.unit.to_string()),
+    //     }
+    // }
 
-    fn doc_to_temperature(&self, doc: &Document) -> Result<Temperature> {
-        let amount = doc.get("amount").and_then(Bson::as_f64).expect("Error finding amount or converting to f64");
+    // fn doc_to_temperature(&self, doc: &Document) -> Result<Temperature> {
+    //     let amount = doc.get("amount").and_then(Bson::as_f64).expect("Error finding amount or converting to f64");
 
-        let unit_str = doc.get("unit").and_then(Bson::as_str).expect("Error finding TemperatureUnit String");
+    //     let unit_str = doc.get("unit").and_then(Bson::as_str).expect("Error finding TemperatureUnit String");
 
-        let unit = TemperatureUnit::from_str(unit_str).expect("Error converting TemperatureUnit to String");
+    //     let unit = TemperatureUnit::from_str(unit_str).expect("Error converting TemperatureUnit to String");
 
-        let t = Temperature { amount, unit };
+    //     let t = Temperature { amount, unit };
 
-        Ok(t)
-    }
+    //     Ok(t)
+    // }
 
-    fn book_source_to_doc(&self, bs: &BookSource) -> Document {
-        let authors = bs.authors.iter().map(|s| Bson::String(s.clone())).collect();
+    // fn book_source_to_doc(&self, bs: &BookSource) -> Document {
+    //     let authors = bs.authors.iter().map(|s| Bson::String(s.clone())).collect();
 
-        doc! {
-            "authors": Bson::Array(authors),
-            "title": Bson::String(bs.title.clone()),
-            "isbn": bs.isbn.as_ref().map_or(Bson::Null, |s| Bson::String(s.clone())),
-            "notes": bs.notes.as_ref().map_or(Bson::Null, |s| Bson::String(s.clone())),
-        }
-    }
+    //     doc! {
+    //         "authors": Bson::Array(authors),
+    //         "title": Bson::String(bs.title.clone()),
+    //         "isbn": bs.isbn.as_ref().map_or(Bson::Null, |s| Bson::String(s.clone())),
+    //         "notes": bs.notes.as_ref().map_or(Bson::Null, |s| Bson::String(s.clone())),
+    //     }
+    // }
 
-    fn doc_to_book_source(&self, doc: &Document) -> Result<BookSource> {
-        let authors = unimplemented!();
-        let title = unimplemented!();
-        let isbn = unimplemented!();
-        let notes = unimplemented!();
+    // fn doc_to_book_source(&self, doc: &Document) -> Result<BookSource> {
+    //     let authors = unimplemented!();
+    //     let title = unimplemented!();
+    //     let isbn = unimplemented!();
+    //     let notes = unimplemented!();
 
-        let bs = BookSource {
-            authors,
-            title,
-            isbn,
-            notes,
-        };
+    //     let bs = BookSource {
+    //         authors,
+    //         title,
+    //         isbn,
+    //         notes,
+    //     };
 
-        Ok(bs)
-    }
+    //     Ok(bs)
+    // }
 }
 
 /* FILTER EXAMPLE */

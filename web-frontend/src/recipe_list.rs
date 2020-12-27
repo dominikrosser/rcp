@@ -189,7 +189,7 @@ impl State {
     fn dummies(size: u32) -> Vec<Recipe> {
         let mut zero_vec: Vec<Recipe> = Vec::with_capacity(size as usize);
         for i in 0..size {
-            zero_vec.push(Recipe::new(""));
+            zero_vec.push(Default::default());
         }
         return zero_vec;
     }
