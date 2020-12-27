@@ -2,8 +2,8 @@
 
 ## Run dev
 
-### Run MongoDB docker image locally (required for api)
-`cd web-api && make mongostart`
+### Run mongodb docker image (required for api)
+`cd web-api && docker-compose up -d`
 
 ### Run Api
 `cd web-api && make dev`
