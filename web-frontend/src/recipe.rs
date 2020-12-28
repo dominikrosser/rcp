@@ -65,7 +65,10 @@ impl Component for RecipeComp {
     type Properties = Props;
 
     fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        let recipe = Recipe { recipe_uuid: props.recipe_uuid, ..Default::default() };
+        let recipe = Recipe {
+            recipe_uuid: props.recipe_uuid,
+            ..Default::default()
+        };
 
         let mut recipe_comp = Self {
             link,
@@ -156,6 +159,9 @@ impl Component for RecipeComp {
                     "".to_string()
                 }
             }</p>
+
+            <h3>{"ingredients"}</h3>
+            <p>{ format!("{:#?}", self.model.ingredients) }</p>
 
         </>}
     }
