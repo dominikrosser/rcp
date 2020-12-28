@@ -8,7 +8,16 @@ pub struct Ingredient {
 
     /* This field is a list of ingredients, in exactly the same format as a regular ingredient list item, minus the substitutions field.
      * For instance, it must contain amounts, and may also contain processing, usda_num, notes, etc. */
-    pub substitutions: Option<Vec<IngredientData>>,
+    pub substitutions: Vec<IngredientData>,
+}
+
+impl Ingredient {
+    pub fn new() -> Self {
+        Self {
+            ingredient: IngredientData::new(),
+            ..Default::default()
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Default, Debug)]
@@ -17,15 +26,21 @@ pub struct Amount {
     pub unit: String,
 }
 
+impl Amount {
+    pub fn new() -> Self {
+        Default::default()
+    }
+}
+
 #[derive(Serialize, Deserialize, Default, Debug)]
 pub struct IngredientData {
     /* A list of dicts which describe the amounts to use. Normally, the list will only contain one dict.
      * In cases where multiple yields need to be stored (i.e. 50 cookies vs 100 cookes vs 250 cookies),
      * each yield will have its own dict in this list, in the same order as the recipe’s yield field. */
-    pub amounts: Option<Vec<Amount>>,
+    pub amounts: Vec<Amount>,
 
     /* A list of tags which describe the processing of this item. For instance, “whole”, “large dice”, “minced”, “raw”, “steamed”, etc. */
-    pub processing: Option<Vec<String>>,
+    pub processing: Vec<String>,
 
     /* Any notes specific to this ingredient. */
     pub notes: Option<String>,
@@ -33,5 +48,14 @@ pub struct IngredientData {
     /* This corresponds with the index keys in the USDA Standard Reference. It is generally used for easy lookup of nutritional data.
      * If possible, this should be used, and USDA data, when available, is preferable to any other nutritional data source. */
     // We removed usda_num in favor of an ingredient name
-    pub ingredient_name: Option<String>,
+    pub ingredient_name: String,
+}
+
+impl IngredientData {
+    pub fn new() -> Self {
+        Self {
+            amounts: vec![Amount::new()],
+            ..Default::default()
+        }
+    }
 }

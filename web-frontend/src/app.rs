@@ -194,7 +194,7 @@ impl App {
         </div>
         <div class="ui mobile only padded grid">
             <div class="ui borderless fluid huge inverted menu">
-                <a class="header item" href="#root">{"Recipedia"}</a>
+                <a class="header item" href="#">{"Recipedia"}</a>
                 <div class="right menu">
                     <div class="item">
                         <button class="ui icon toggle basic inverted button">
