@@ -1,13 +1,13 @@
-#![recursion_limit = "512"]
+#![recursion_limit = "1024"]
 #![allow(dead_code)]
 #![allow(unused_imports)]
 #![allow(unused_variables)]
 #![allow(unused_braces)]
 
+mod add_recipe;
 mod app;
 mod recipe;
 mod recipe_list;
-mod add_recipe;
 mod reroute_agent;
 
 use yew::html::{Component, ComponentLink};
@@ -27,3 +27,4 @@ pub fn run_app() -> Result<(), JsValue> {
     yew::start_app::<app::App>();
     Ok(())
 }
+

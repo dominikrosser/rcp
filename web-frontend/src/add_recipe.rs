@@ -78,6 +78,12 @@ pub enum Msg {
     IngredientProcessingInputChanged(usize, usize, String),
     // (ingredient index)
     OnIngredientAddProcessing(usize),
+    // (ingredient index)
+    OnIngredientAddNotes(usize),
+    // (ingredient index, new value)
+    IngredientNotesInputChanged(usize, String),
+    // (ingredient index)
+    OnRemoveIngredient(usize),
     // STEPS
     OnAddSteps,
     // YIELDS
@@ -162,7 +168,7 @@ impl Component for AddRecipeComp {
                     .as_ref()
                     .map_or(None, |temp| {
                         Some(Temperature {
-                            amount: amount,
+                            amount,
                             unit: temp.unit.clone(),
                         })
                     });
@@ -178,7 +184,7 @@ impl Component for AddRecipeComp {
                     .map_or(None, |temp| {
                         Some(Temperature {
                             amount: temp.amount,
-                            unit: unit,
+                            unit,
                         })
                     });
                 true
@@ -200,9 +206,6 @@ impl Component for AddRecipeComp {
                     ingredients.push(Ingredient::new());
                 } else {
                     self.state.recipe_data.ingredients = Some(vec![Ingredient::new()]);
-                    if let Some(ingredients) = self.state.recipe_data.ingredients.as_mut() {
-                        ingredients.push(Ingredient::new());
-                    }
                 }
                 true
             }
@@ -275,6 +278,51 @@ impl Component for AddRecipeComp {
                     if ing_idx < ingredients.len() {
                         let ing = &mut ingredients[ing_idx].ingredient;
                         ing.processing.push(String::new());
+                        true
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                }
+            }
+            Msg::OnIngredientAddNotes(ing_idx) => {
+                if let Some(ingredients) = self.state.recipe_data.ingredients.as_mut() {
+                    if ing_idx < ingredients.len() {
+                        let ing = &mut ingredients[ing_idx].ingredient;
+                        if ing.notes.is_none() {
+                            ing.notes = Some(String::new());
+                            true
+                        } else {
+                            false
+                        }
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                }
+            }
+            Msg::IngredientNotesInputChanged(ing_idx, new_notes_str) => {
+                if let Some(ingredients) = self.state.recipe_data.ingredients.as_mut() {
+                    if ing_idx < ingredients.len() {
+                        let ing = &mut ingredients[ing_idx].ingredient;
+                        ing.notes = Some(new_notes_str);
+                        true
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                }
+            }
+            Msg::OnRemoveIngredient(ing_idx) => {
+                if let Some(ingredients) = self.state.recipe_data.ingredients.as_mut() {
+                    if ing_idx < ingredients.len() {
+                        ingredients.remove(ing_idx);
+                        if ingredients.is_empty() {
+                            self.state.recipe_data.ingredients = None;
+                        }
                         true
                     } else {
                         false
@@ -514,13 +562,17 @@ impl AddRecipeComp {
                                     <input
                                         type="number",
                                         value=&entry.amount,
-                                        oninput=self.link.callback(move |e: InputData| Msg::IngredientAmountInputChanged(idx, pos, e.value))
+                                        oninput=self.link.callback(move |e: InputData|
+                                            Msg::IngredientAmountInputChanged(idx, pos, e.value)
+                                        )
                                         />
                                     // unit
                                     <input
                                         type="text"
                                         value=&entry.unit,
-                                        oninput=self.link.callback(move |e: InputData| Msg::IngredientAmountUnitInputChanged(idx, pos, e.value))
+                                        oninput=self.link.callback(move |e: InputData|
+                                            Msg::IngredientAmountUnitInputChanged(idx, pos, e.value)
+                                        )
                                         />
                                     </>}
                                     })
@@ -537,12 +589,38 @@ impl AddRecipeComp {
                                     <input
                                         type="text",
                                         value=&entry,
-                                        oninput=self.link.callback(move |e: InputData| Msg::IngredientProcessingInputChanged(idx, pos, e.value)) />
+                                        oninput=self.link.callback(move |e: InputData|
+                                            Msg::IngredientProcessingInputChanged(idx, pos, e.value)
+                                        ) />
                                 </>}
                             })
                         }
                     }
                     { self.view_add_btn("Add Processing", move |_| Msg::OnIngredientAddProcessing(idx)) }
+                </td>
+
+                // notes
+                <td>
+                    {
+                        if let Some(notes) = ing.notes.as_ref() {
+                            html!{
+                                <textarea
+                                    rows=2,
+                                    type="text",
+                                    value=notes,
+                                    oninput=self.link.callback(move |e: InputData| Msg::IngredientNotesInputChanged(idx, e.value))
+                                    />
+                            }
+                        } else {
+                            { self.view_add_btn("Add notes", move |_| Msg::OnIngredientAddNotes(idx)) }
+                        }
+                    }
+                </td>
+
+                // Column for removing ingredients btn
+                <td>
+                    { self.view_remove_btn("Remove Ingredient", move |_| Msg::OnRemoveIngredient(idx)) }
+
                 </td>
             </tr>
         }
@@ -568,6 +646,8 @@ impl AddRecipeComp {
                                 <th>{"ingredient_name"}</th>
                                 <th>{"amount, unit"}</th>
                                 <th>{"processing"}</th>
+                                <th>{"notes"}</th>
+                                <th>{""}</th>// Column for removing ingredients btn
                             </tr>
                         </thead>
                         <tbody>
@@ -594,6 +674,18 @@ impl AddRecipeComp {
             <div class="ui teal labeled icon button" onclick=self.link.callback(cb)>
                 {text}
                 <i class="add icon"></i>
+            </div>
+        }
+    }
+
+    fn view_remove_btn<P: 'static>(&self, text: &str, cb: P) -> Html
+    where
+        P: Fn(MouseEvent) -> Msg,
+    {
+        html! {
+            <div class="ui labeled icon button" onclick=self.link.callback(cb)>
+                {text}
+                <i class="remove icon"></i>
             </div>
         }
     }
