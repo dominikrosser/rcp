@@ -8,3 +8,12 @@ pub struct Yield {
     /* Generally “servings”, but up to the user. Can be “packages”, “cups”, “glasses”, etc. */
     pub unit: String,
 }
+
+impl Yield {
+    fn new() -> Self {
+        Self {
+            unit: "servings".to_string(),
+            ..Default::default()
+        }
+    }
+}

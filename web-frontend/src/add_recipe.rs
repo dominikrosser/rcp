@@ -55,39 +55,52 @@ impl State {
 
 pub enum Msg {
     Noop,
-    AddRecipe,
-    ReceivePostResponse(Result<CreateRecipeResponse, anyhow::Error>),
-
-    RecipeNameInputChanged(String),
-    RecipeOvenTimeInputChanged(String),
-    RecipeNotesInputChanged(String),
-    RecipeOvenFanSelectChanged(String),
-    RecipeOvenTempAmountInputChanged(String), //TODO
-    RecipeOvenTempUnitInputChanged(String),   //TODO
+    OnAddRecipe,
+    OnReceivePostResponse(Result<CreateRecipeResponse, anyhow::Error>),
+    OnRecipeNameInputChanged(String),
+    OnRecipeOvenTimeInputChanged(String),
+    OnRecipeNotesInputChanged(String),
+    OnRecipeOvenFanSelectChanged(String),
+    OnRecipeOvenTempAmountInputChanged(String), //TODO
+    OnRecipeOvenTempUnitInputChanged(String),   //TODO
     // SOURCE BOOK
     // SOURCE AUTHORS
-    RecipeSourceUrlInputChanged(String), //TODO
+    OnRecipeSourceUrlInputChanged(String), //TODO
     // INGREDIENTS
     OnAddIngredient,
-    IngredientNameInputChanged(usize, String),
+    OnIngredientNameInputChanged(usize, String),
     // (ingredient index, amount index, amount.amount value)
-    IngredientAmountInputChanged(usize, usize, String),
+    OnIngredientAmountInputChanged(usize, usize, String),
     // (ingredient index, amount index, amount.unit value)
-    IngredientAmountUnitInputChanged(usize, usize, String),
+    OnIngredientAmountUnitInputChanged(usize, usize, String),
     // (ingredient index, processing index, new value)
-    IngredientProcessingInputChanged(usize, usize, String),
+    OnIngredientProcessingInputChanged(usize, usize, String),
     // (ingredient index)
     OnIngredientAddProcessing(usize),
     // (ingredient index)
     OnIngredientAddNotes(usize),
     // (ingredient index, new value)
-    IngredientNotesInputChanged(usize, String),
+    OnIngredientNotesInputChanged(usize, String),
     // (ingredient index)
     OnRemoveIngredient(usize),
     // STEPS
-    OnAddSteps,
+    OnAddStep,
+    // (step index, new step string)
+    OnStepInputChanged(usize, String),
+    // (step index)
+    OnRemoveStep(usize),
+    // (step index)
+    OnStepAddNotes(usize),
+    // (step index, new value)
+    OnStepNotesInputChanged(usize, String),
     // YIELDS
-    OnAddYields,
+    OnAddYield,
+    // (yield index)
+    OnRemoveYield(usize),
+    // (yield index, new_amount_str)
+    OnYieldAmountInputChanged(usize, String),
+    // (yield index, new_unit_str)
+    OnYieldUnitInputChanged(usize, String),
 }
 
 impl Component for AddRecipeComp {
@@ -111,7 +124,7 @@ impl Component for AddRecipeComp {
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
             Msg::Noop => false,
-            Msg::AddRecipe => {
+            Msg::OnAddRecipe => {
                 let task: FetchTask = self.build_fetch_recipe_task();
 
                 // 4. store the task so it isn't canceled immediately
@@ -119,7 +132,7 @@ impl Component for AddRecipeComp {
 
                 true
             }
-            Msg::ReceivePostResponse(data) => {
+            Msg::OnReceivePostResponse(data) => {
                 self.state.recipe_data.recipe_name = None;
                 self.state.recipe_data.oven_time = None;
                 self.state.recipe_data.oven_fan = None;
@@ -142,24 +155,24 @@ impl Component for AddRecipeComp {
 
                 true
             }
-            Msg::RecipeNameInputChanged(recipe_name) => {
+            Msg::OnRecipeNameInputChanged(recipe_name) => {
                 self.state.recipe_data.recipe_name = Some(recipe_name);
                 true
             }
-            Msg::RecipeOvenTimeInputChanged(oven_time) => {
-                let oven_time: f64 = oven_time.parse::<f64>().unwrap();
+            Msg::OnRecipeOvenTimeInputChanged(oven_time) => {
+                let oven_time: f64 = oven_time.parse::<f64>().unwrap_or(0.0f64);
                 self.state.recipe_data.oven_time = Some(oven_time);
                 true
             }
-            Msg::RecipeNotesInputChanged(notes) => {
+            Msg::OnRecipeNotesInputChanged(notes) => {
                 self.state.recipe_data.notes = Some(notes);
                 true
             }
-            Msg::RecipeOvenFanSelectChanged(oven_fan) => {
+            Msg::OnRecipeOvenFanSelectChanged(oven_fan) => {
                 self.state.recipe_data.oven_fan = OvenFanValue::from_str(&oven_fan).ok();
                 true
             }
-            Msg::RecipeOvenTempAmountInputChanged(amount_str) => {
+            Msg::OnRecipeOvenTempAmountInputChanged(amount_str) => {
                 let amount: f64 = amount_str.parse().unwrap_or(0.0f64);
                 self.state.recipe_data.oven_temp = self
                     .state
@@ -174,7 +187,7 @@ impl Component for AddRecipeComp {
                     });
                 true
             }
-            Msg::RecipeOvenTempUnitInputChanged(unit_str) => {
+            Msg::OnRecipeOvenTempUnitInputChanged(unit_str) => {
                 let unit = TemperatureUnit::from_str(&unit_str).unwrap();
                 self.state.recipe_data.oven_temp = self
                     .state
@@ -189,16 +202,24 @@ impl Component for AddRecipeComp {
                     });
                 true
             }
-            Msg::RecipeSourceUrlInputChanged(source_url_str) => {
+            Msg::OnRecipeSourceUrlInputChanged(source_url_str) => {
                 self.state.recipe_data.source_url = Some(source_url_str);
                 true
             }
-            Msg::OnAddYields => {
-                self.state.recipe_data.yields = Some(vec![Default::default()]);
+            Msg::OnAddYield => {
+                if let Some(yields) = self.state.recipe_data.yields.as_mut() {
+                    yields.push(Default::default());
+                } else {
+                    self.state.recipe_data.yields = Some(vec![Default::default()]);
+                }
                 true
             }
-            Msg::OnAddSteps => {
-                self.state.recipe_data.steps = Some(vec![Default::default()]);
+            Msg::OnAddStep => {
+                if let Some(steps) = self.state.recipe_data.steps.as_mut() {
+                    steps.push(Default::default());
+                } else {
+                    self.state.recipe_data.steps = Some(vec![Default::default()]);
+                }
                 true
             }
             Msg::OnAddIngredient => {
@@ -209,7 +230,7 @@ impl Component for AddRecipeComp {
                 }
                 true
             }
-            Msg::IngredientNameInputChanged(idx, ing_name_str) => {
+            Msg::OnIngredientNameInputChanged(idx, ing_name_str) => {
                 if let Some(ingredients) = self.state.recipe_data.ingredients.as_mut() {
                     if idx < ingredients.len() {
                         ingredients[idx].ingredient.ingredient_name = ing_name_str;
@@ -221,7 +242,7 @@ impl Component for AddRecipeComp {
                     false
                 }
             }
-            Msg::IngredientAmountInputChanged(ing_idx, amount_idx, amount_str) => {
+            Msg::OnIngredientAmountInputChanged(ing_idx, amount_idx, amount_str) => {
                 if let Some(ingredients) = self.state.recipe_data.ingredients.as_mut() {
                     if ing_idx < ingredients.len() {
                         let ing = &mut ingredients[ing_idx].ingredient;
@@ -239,7 +260,7 @@ impl Component for AddRecipeComp {
                     false
                 }
             }
-            Msg::IngredientAmountUnitInputChanged(ing_idx, amount_idx, unit_str) => {
+            Msg::OnIngredientAmountUnitInputChanged(ing_idx, amount_idx, unit_str) => {
                 if let Some(ingredients) = self.state.recipe_data.ingredients.as_mut() {
                     if ing_idx < ingredients.len() {
                         let ing = &mut ingredients[ing_idx].ingredient;
@@ -256,7 +277,7 @@ impl Component for AddRecipeComp {
                     false
                 }
             }
-            Msg::IngredientProcessingInputChanged(ing_idx, processing_idx, new_str) => {
+            Msg::OnIngredientProcessingInputChanged(ing_idx, processing_idx, new_str) => {
                 if let Some(ingredients) = self.state.recipe_data.ingredients.as_mut() {
                     if ing_idx < ingredients.len() {
                         let ing = &mut ingredients[ing_idx].ingredient;
@@ -303,7 +324,7 @@ impl Component for AddRecipeComp {
                     false
                 }
             }
-            Msg::IngredientNotesInputChanged(ing_idx, new_notes_str) => {
+            Msg::OnIngredientNotesInputChanged(ing_idx, new_notes_str) => {
                 if let Some(ingredients) = self.state.recipe_data.ingredients.as_mut() {
                     if ing_idx < ingredients.len() {
                         let ing = &mut ingredients[ing_idx].ingredient;
@@ -331,6 +352,107 @@ impl Component for AddRecipeComp {
                     false
                 }
             }
+            Msg::OnStepInputChanged(step_idx, new_step_str) => {
+                if let Some(steps) = self.state.recipe_data.steps.as_mut() {
+                    if step_idx < steps.len() {
+                        steps[step_idx].step = new_step_str;
+                        true
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                }
+            }
+            Msg::OnRemoveStep(step_idx) => {
+                if let Some(steps) = self.state.recipe_data.steps.as_mut() {
+                    if step_idx < steps.len() {
+                        steps.remove(step_idx);
+                        if steps.is_empty() {
+                            self.state.recipe_data.steps = None;
+                        }
+                        true
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                }
+            }
+            Msg::OnStepAddNotes(step_idx) => {
+                if let Some(steps) = self.state.recipe_data.steps.as_mut() {
+                    if step_idx < steps.len() {
+                        let step = &mut steps[step_idx];
+                        if step.notes.is_none() {
+                            step.notes = Some(String::new());
+                            true
+                        } else {
+                            false
+                        }
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                }
+            }
+            Msg::OnStepNotesInputChanged(step_idx, new_notes_str) => {
+                if let Some(steps) = self.state.recipe_data.steps.as_mut() {
+                    if step_idx < steps.len() {
+                        let step = &mut steps[step_idx];
+                        if step.notes.is_some() {
+                            step.notes = Some(new_notes_str);
+                            true
+                        } else {
+                            false
+                        }
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                }
+            }
+            Msg::OnRemoveYield(yield_idx) => {
+                if let Some(yields) = self.state.recipe_data.yields.as_mut() {
+                    if yield_idx < yields.len() {
+                        yields.remove(yield_idx);
+                        if yields.is_empty() {
+                            self.state.recipe_data.yields = None;
+                        }
+                        true
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                }
+            }
+            Msg::OnYieldAmountInputChanged(yield_idx, amount_str) => {
+                if let Some(yields) = self.state.recipe_data.yields.as_mut() {
+                    if yield_idx < yields.len() {
+                        let amount: f64 = amount_str.parse::<f64>().unwrap_or(0.0f64);
+                        yields[yield_idx].amount = amount;
+                        true
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                }
+            }
+            Msg::OnYieldUnitInputChanged(yield_idx, unit_str) => {
+                if let Some(yields) = self.state.recipe_data.yields.as_mut() {
+                    if yield_idx < yields.len() {
+                        yields[yield_idx].unit = unit_str;
+                        true
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                }
+            }
         }
     }
 
@@ -340,7 +462,7 @@ impl Component for AddRecipeComp {
         } else {
             let oninput: Callback<InputData> = self
                 .link
-                .callback(|e: InputData| Msg::RecipeNameInputChanged(e.value));
+                .callback(|e: InputData| Msg::OnRecipeNameInputChanged(e.value));
 
             html! {<>
                 {
@@ -384,7 +506,7 @@ impl AddRecipeComp {
         let callback = self.link.callback(
             |response: Response<Json<Result<CreateRecipeResponse, anyhow::Error>>>| {
                 let Json(data) = response.into_body();
-                Msg::ReceivePostResponse(data)
+                Msg::OnReceivePostResponse(data)
             },
         );
 
@@ -397,7 +519,7 @@ impl AddRecipeComp {
 
     fn view_submit_recipe_button(&self) -> Html {
         html! {
-            <button class="ui button" type="submit" onclick=self.link.callback(|_| Msg::AddRecipe)>
+            <button class="ui button" type="submit" onclick=self.link.callback(|_| Msg::OnAddRecipe)>
                 { "Submit" }
             </button>
         }
@@ -409,7 +531,7 @@ impl AddRecipeComp {
             Some(temp) => {
                 let on_oven_temp_amount_input = self
                     .link
-                    .callback(|e: InputData| Msg::RecipeOvenTempAmountInputChanged(e.value));
+                    .callback(|e: InputData| Msg::OnRecipeOvenTempAmountInputChanged(e.value));
 
                 html! {
 
@@ -436,7 +558,7 @@ impl AddRecipeComp {
                     name="oven_fan",
                     id="oven_fan_select",
                     value={if let Some(of) = &self.state.recipe_data.oven_fan { OvenFanValue::to_string(of) } else { "".to_string() }},
-                    onchange=self.link.callback(|e: ChangeData| Msg::RecipeOvenFanSelectChanged(match e {
+                    onchange=self.link.callback(|e: ChangeData| Msg::OnRecipeOvenFanSelectChanged(match e {
                         ChangeData::Select(selElement) => selElement.value(),
                         _ => "".to_string(),
                     }))
@@ -462,7 +584,7 @@ impl AddRecipeComp {
                         None => "",
                         Some(s) => s,
                     },
-                    oninput=self.link.callback(|e: InputData| Msg::RecipeNotesInputChanged(e.value))
+                    oninput=self.link.callback(|e: InputData| Msg::OnRecipeNotesInputChanged(e.value))
                     />
             </div>
         }
@@ -479,7 +601,7 @@ impl AddRecipeComp {
                         None => "".to_string(),
                         Some(t) => t.to_string(),
                     },
-                    oninput=self.link.callback(|e: InputData| Msg::RecipeOvenTimeInputChanged(e.value))
+                    oninput=self.link.callback(|e: InputData| Msg::OnRecipeOvenTimeInputChanged(e.value))
                     />
             </div>
         }
@@ -496,7 +618,7 @@ impl AddRecipeComp {
                         None => "",
                         Some(name) => name,
                     },
-                    oninput=self.link.callback(|e: InputData| Msg::RecipeNameInputChanged(e.value))
+                    oninput=self.link.callback(|e: InputData| Msg::OnRecipeNameInputChanged(e.value))
                     />
             </div>
         }
@@ -520,7 +642,7 @@ impl AddRecipeComp {
             }
             None => {
                 html! {
-                    { self.view_add_btn("Add Steps", |_| Msg::OnAddSteps) }
+                    { self.view_add_btn("Add Steps", |_| Msg::OnAddStep) }
                 }
             }
         }
@@ -544,7 +666,7 @@ impl AddRecipeComp {
                             placeholder="e.g. apple(s)",
                             type="text",
                             value=&ing.ingredient_name,
-                            oninput=self.link.callback(move |e: InputData| Msg::IngredientNameInputChanged(idx, e.value))
+                            oninput=self.link.callback(move |e: InputData| Msg::OnIngredientNameInputChanged(idx, e.value))
                             />
                     </div>
                 </td>
@@ -563,7 +685,7 @@ impl AddRecipeComp {
                                         type="number",
                                         value=&entry.amount,
                                         oninput=self.link.callback(move |e: InputData|
-                                            Msg::IngredientAmountInputChanged(idx, pos, e.value)
+                                            Msg::OnIngredientAmountInputChanged(idx, pos, e.value)
                                         )
                                         />
                                     // unit
@@ -571,7 +693,7 @@ impl AddRecipeComp {
                                         type="text"
                                         value=&entry.unit,
                                         oninput=self.link.callback(move |e: InputData|
-                                            Msg::IngredientAmountUnitInputChanged(idx, pos, e.value)
+                                            Msg::OnIngredientAmountUnitInputChanged(idx, pos, e.value)
                                         )
                                         />
                                     </>}
@@ -590,7 +712,7 @@ impl AddRecipeComp {
                                         type="text",
                                         value=&entry,
                                         oninput=self.link.callback(move |e: InputData|
-                                            Msg::IngredientProcessingInputChanged(idx, pos, e.value)
+                                            Msg::OnIngredientProcessingInputChanged(idx, pos, e.value)
                                         ) />
                                 </>}
                             })
@@ -608,7 +730,7 @@ impl AddRecipeComp {
                                     rows=2,
                                     type="text",
                                     value=notes,
-                                    oninput=self.link.callback(move |e: InputData| Msg::IngredientNotesInputChanged(idx, e.value))
+                                    oninput=self.link.callback(move |e: InputData| Msg::OnIngredientNotesInputChanged(idx, e.value))
                                     />
                             }
                         } else {
@@ -706,7 +828,7 @@ impl AddRecipeComp {
 
                 yields_html
             }
-            None => self.view_add_btn("Add Yields", |_| Msg::OnAddYields),
+            None => self.view_add_btn("Add Yields", |_| Msg::OnAddYield),
         }
     }
 }
