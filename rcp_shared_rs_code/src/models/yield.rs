@@ -10,7 +10,7 @@ pub struct Yield {
 }
 
 impl Yield {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             unit: "servings".to_string(),
             ..Default::default()

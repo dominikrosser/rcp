@@ -129,39 +129,19 @@ impl Component for RecipeComp {
             { self.view_back_to_recipes() }
 
             <br/>
-            <h2>{"Recipe"}</h2>
+            <h2 class="ui header">{ self.model.recipe_name.as_ref().unwrap_or(&"Recipe".to_string()) }</h2>
 
-            <h3>{"recipe_uuid"}</h3>
-            <p>{ &self.model.recipe_uuid }</p>
 
-            <h3>{"recipe_name"}</h3>
-            <p>{ match &self.model.recipe_name {
-                Some(name) => name,
-                None => "",
-            }}</p>
+            { self.view_notes() }
 
-            <h3>{"oven_time"}</h3>
-            <p>{ match &self.model.oven_time {
-                Some(t) => t.to_string(),
-                None => "Null".to_string(),
-            }}</p>
+            <h3 class="ui header">{"Oven"}</h3>
+            { self.view_oven_fan() }
+            { self.view_oven_time() }
 
-            <h3>{"notes"}</h3>
-            <p>{ match &self.model.notes {
-                Some(s) => s.clone(),
-                None => "Null".to_string(),
-            }}</p>
+            { self.view_ingredients() }
 
-            <h3>{"oven_fan"}</h3>
-            <p>{ if let Some(of) = &self.model.oven_fan {
-                OvenFanValue::to_string(of)
-                } else {
-                    "".to_string()
-                }
-            }</p>
-
-            <h3>{"ingredients"}</h3>
-            <p>{ format!("{:#?}", self.model.ingredients) }</p>
+            { self.view_yields() }
+            { self.view_steps() }
 
         </>}
     }
@@ -219,6 +199,133 @@ impl RecipeComp {
                 <i class="left chevron icon"></i>
                 { "Back to Recipes" }
             </button>
+        }
+    }
+
+    fn view_notes(&self) -> Html {
+        self.model.notes.as_ref().map_or(html! {}, |s| {
+            html! {<>
+                <h3 class="ui header">{"Notes"}</h3>
+                <p>{ s.clone() }</p>
+            </>}
+        })
+    }
+
+    fn view_yields(&self) -> Html {
+        self.model.yields.as_ref().map_or(html! {}, |yields| {
+            let yields_html = html! {
+                for yields
+                    .iter()
+                    .enumerate()
+                    .map(|(pos, entry)| self.view_yield((pos, entry)))
+            };
+            html! {<>
+                <h3 class="ui header">{"Yields"}</h3>
+                <ul>
+                    { yields_html }
+                </ul>
+            </>}
+        })
+    }
+
+    fn view_yield(&self, (idx, r#yield): (usize, &Yield)) -> Html {
+        html! {
+            <li>
+                { format!("{} {}", r#yield.amount, r#yield.unit) }
+            </li>
+        }
+    }
+
+    fn view_oven_fan(&self) -> Html {
+        self.model.oven_fan.as_ref().map_or(html! {}, |of| {
+            html! {
+                <p>{ format!("Fan: {}", OvenFanValue::to_string(of)) }</p>
+            }
+        })
+    }
+
+    fn view_oven_time(&self) -> Html {
+        self.model.oven_time.as_ref().map_or(html! {}, |ot| {
+            html! {
+                <p>{ format!("Total time: {}", ot) }</p>
+            }
+        })
+    }
+
+    fn view_steps(&self) -> Html {
+        self.model.steps.as_ref().map_or(html! {}, |steps| {
+            if steps.is_empty() {
+                html! {}
+            } else {
+                let steps_html = html! {
+                    for steps
+                        .iter()
+                        .enumerate()
+                        .map(|(pos, entry)| self.view_step((pos, entry)))
+                };
+
+                html! {<>
+                    <h3 class="ui header">{"Steps"}</h3>
+                    <div class="ui raised segments">
+                        { steps_html }
+                    </div>
+                </>}
+            }
+        })
+    }
+
+    fn view_step(&self, (idx, step): (usize, &Step)) -> Html {
+        let notes_html = step.notes.as_ref().map_or(html! {}, |s| html! {{s}});
+
+        html! {
+            <div class="ui segment">
+                <div>
+                    <p><b>{ idx + 1 }</b></p>
+                </div>
+                <div class="content">
+                    <p>{ &step.step }</p>
+                    <p><em>{ notes_html }</em></p>
+                </div>
+            </div>
+        }
+    }
+
+    fn view_ingredients(&self) -> Html {
+        self.model
+            .ingredients
+            .as_ref()
+            .map_or(html! {}, |ingredients| {
+                if ingredients.is_empty() {
+                    html! {}
+                } else {
+                    let ingredients_html = html! {
+                        for ingredients
+                            .iter()
+                            .enumerate()
+                            .map(|(pos, entry)| self.view_ingredient((pos, entry)))
+                    };
+
+                    html! {<>
+                        <h3 class="ui header">{"Ingredients"}</h3>
+                        <div class="ui list">
+                            { ingredients_html }
+                        </div>
+                    </>}
+                }
+            })
+    }
+
+    fn view_ingredient(&self, (idx, ing): (usize, &Ingredient)) -> Html {
+        let cb_id = format!("ingredient-checkbox-{}", idx);
+        let i = &ing.ingredient;
+
+        html! {
+            <div class="item">
+                <div class="ui checkbox">
+                    <input type="checkbox" id=&cb_id />
+                    <label for=&cb_id>{&i.ingredient_name}</label>
+                </div>
+            </div>
         }
     }
 }
