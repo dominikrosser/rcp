@@ -58,4 +58,17 @@ impl IngredientData {
             ..Default::default()
         }
     }
+
+    pub fn get_amount_str(&self, idx: usize) -> String {
+        if idx < self.amounts.len() {
+            let mut amount_str = self.amounts[idx].amount.to_string();
+            if !self.amounts[idx].unit.is_empty() {
+                amount_str.push(' ');
+            }
+            amount_str.push_str(&self.amounts[idx].unit);
+            amount_str
+        } else {
+            "".to_string()
+        }
+    }
 }

@@ -22,3 +22,12 @@ pub struct RecipeRequest {
     pub steps: Option<Vec<Step>>,
     pub yields: Option<Vec<Yield>>,
 }
+
+impl RecipeRequest {
+    pub fn new() -> Self {
+        Self {
+            yields: Some(vec![Yield::new()]),
+            ..Default::default()
+        }
+    }
+}

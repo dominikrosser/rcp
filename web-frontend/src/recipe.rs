@@ -307,7 +307,7 @@ impl RecipeComp {
 
                     html! {<>
                         <h3 class="ui header">{"Ingredients"}</h3>
-                        <div class="ui list">
+                        <div class="ui celled list">
                             { ingredients_html }
                         </div>
                     </>}
@@ -321,9 +321,27 @@ impl RecipeComp {
 
         html! {
             <div class="item">
-                <div class="ui checkbox">
-                    <input type="checkbox" id=&cb_id />
-                    <label for=&cb_id>{&i.ingredient_name}</label>
+                // <div class="ui checkbox">
+                //     <input type="checkbox" id=&cb_id />
+                //     <label for=&cb_id>{&i.ingredient_name}</label>
+                // </div>
+                <div class="content">
+                    <div class="meta right floated"><span>{ i.get_amount_str(0/*TODO index*/) }</span></div>
+                    <div class="header left floated">{ &i.ingredient_name }</div>
+                    <div class="left floated">
+                        {
+                            i.processing.iter().enumerate().map(|(pos, s)| html! {
+                                <div class="ui tiny label">{ s }</div>
+                            }).collect::<Html>()
+                        }
+                    </div>
+                    {
+                        if let Some(notes) = i.notes.as_ref() {
+                            html! {
+                                <div class="description left floated">{ notes }</div>
+                            }
+                        } else { html! {} }
+                    }
                 </div>
             </div>
         }

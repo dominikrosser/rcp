@@ -11,6 +11,7 @@ use yew::services::fetch::{FetchService, FetchTask, Request, Response};
 use yew::services::ConsoleService;
 use yew_router::{route::Route, service::RouteService, Switch};
 
+use rcp_shared_rs_code::models::ingredient::Amount;
 use rcp_shared_rs_code::models::ingredient::Ingredient;
 use rcp_shared_rs_code::models::oven_fan_value::OvenFanValue;
 use rcp_shared_rs_code::models::r#yield::Yield;
@@ -39,16 +40,18 @@ pub struct State {
     recipe_data: RecipeRequest,
     post_recipes_task: Option<FetchTask>,
     post_response_display_msg: Option<String>, // TODO: Vector with multiple messages
+    selected_yield_idx: usize,
 }
 
 impl State {
     fn new() -> Self {
-        let recipe_data: RecipeRequest = Default::default();
+        let recipe_data: RecipeRequest = RecipeRequest::new();
 
         State {
             post_recipes_task: None,
             post_response_display_msg: None,
-            recipe_data: recipe_data,
+            recipe_data,
+            selected_yield_idx: 0,
         }
     }
 }
@@ -609,7 +612,7 @@ impl AddRecipeComp {
 
     fn view_recipe_name_input(&self) -> Html {
         html! {
-            <div class="field">
+            <div class="required field">
                 <label for="recipe_name_input">{"Title"}</label>
                 <input
                     type="text",
@@ -690,104 +693,125 @@ impl AddRecipeComp {
         }
     }
 
+    fn view_ingredient_amount_input(&self, idx: usize, (pos, entry): (usize, &Amount)) -> Html {
+        html! {<>
+            <div class="required two wide field">
+                // amount
+                <label>
+                    {"Amount"}
+                </label>
+                <input
+                    type="number",
+                    value=&entry.amount,
+                    oninput=self.link.callback(move |e: InputData|
+                        Msg::OnIngredientAmountInputChanged(idx, pos, e.value)
+                    )
+                    />
+            </div>
+            // unit
+            <div class="one two wide field">
+                <label>
+                    {"Unit"}
+                </label>
+                <input
+                    type="text"
+                    value=&entry.unit,
+                    oninput=self.link.callback(move |e: InputData|
+                        Msg::OnIngredientAmountUnitInputChanged(idx, pos, e.value)
+                    )
+                    />
+            </div>
+        </>}
+    }
+
+    fn view_ingredient_processing_input(&self, idx: usize, (pos, entry): (usize, &String)) -> Html {
+        html! {<>
+            <input
+                type="text",
+                value=entry,
+                oninput=self.link.callback(move |e: InputData|
+                    Msg::OnIngredientProcessingInputChanged(idx, pos, e.value)
+                ) />
+        </>}
+    }
+
     fn view_ingredient_input(&self, (idx, i): (usize, &Ingredient)) -> Html {
         let ing = &i.ingredient;
         let subs = &i.substitutions;
 
+        // let amounts_html =
+        //     ing.amounts
+        //         .iter()
+        //         .enumerate()
+        //         .map(|(pos, entry)| { self.view_ingredient_amount_input(idx, (pos, entry)) }).collect::<Html>();
+        let amount_html = if self.state.selected_yield_idx < ing.amounts.len() {
+            self.view_ingredient_amount_input(
+                idx,
+                (
+                    self.state.selected_yield_idx,
+                    &ing.amounts[self.state.selected_yield_idx],
+                ),
+            )
+        } else {
+            html! {}
+        };
+
+        let processing_html = ing
+            .processing
+            .iter()
+            .enumerate()
+            .map(|(pos, entry)| self.view_ingredient_processing_input(idx, (pos, entry)))
+            .collect::<Html>();
+
         html! {<>
-            // ingredient_name
-            <div class="field">
-                <label>
-                    {"Name"}
-                    <input
-                        placeholder="e.g. apple(s)",
-                        type="text",
-                        value=&ing.ingredient_name,
-                        oninput=self.link.callback(move |e: InputData| Msg::OnIngredientNameInputChanged(idx, e.value))
-                    />
-                </label>
-            </div>
-
-            // amount(s) TODO think about how to handle multiple amounts/yields
-            {
-                html! {
-                    for ing.amounts
-                        .iter()
-                        .enumerate()
-                        .map(|(pos, entry)| {
-                            html! {<>
-                                <div class="field">
-                                    // amount
-                                    <label>
-                                        {"Amount"}
-                                        <input
-                                            type="number",
-                                            value=&entry.amount,
-                                            oninput=self.link.callback(move |e: InputData|
-                                                Msg::OnIngredientAmountInputChanged(idx, pos, e.value)
-                                            )
-                                            />
-                                    </label>
-                                </div>
-                                // unit
-                                <div class="field">
-                                    <label>
-                                        {"Unit"}
-                                        <input
-                                            type="text"
-                                            value=&entry.unit,
-                                            oninput=self.link.callback(move |e: InputData|
-                                                Msg::OnIngredientAmountUnitInputChanged(idx, pos, e.value)
-                                            )
-                                            />
-                                    </label>
-                                </div>
-                            </>}
-                            })
-                }
-            }
-
-            // processing
-            {
-                html! {
-                    for ing.processing.iter().enumerate().map(|(pos, entry)| {
-                        html! {<>
-                            <input
-                                type="text",
-                                value=&entry,
-                                oninput=self.link.callback(move |e: InputData|
-                                    Msg::OnIngredientProcessingInputChanged(idx, pos, e.value)
-                                ) />
-                        </>}
-                    })
-                }
-            }
-            { self.view_add_btn("Add Processing", move |_| Msg::OnIngredientAddProcessing(idx)) }
-
-            // notes
-            {
-                if let Some(notes) = ing.notes.as_ref() {
-                    html!{
-                        <textarea
-                            rows=2,
+            <div class="item">
+                <div class="fields">
+                    // ingredient_name
+                    <div class="required three wide field">
+                        <label>
+                            {"Name"}
+                        </label>
+                        <input
+                            placeholder="e.g. apple(s)",
                             type="text",
-                            value=notes,
-                            oninput=self.link.callback(move |e: InputData| Msg::OnIngredientNotesInputChanged(idx, e.value))
-                            />
-                    }
-                } else {
-                    { self.view_add_btn("Add notes", move |_| Msg::OnIngredientAddNotes(idx)) }
-                }
-            }
+                            value=&ing.ingredient_name,
+                            oninput=self.link.callback(move |e: InputData| Msg::OnIngredientNameInputChanged(idx, e.value))
+                        />
+                    </div>
 
-            // Column for removing ingredients btn
+                    { amount_html }
+                </div>
+
+                // processing
+                { processing_html }
+
+                { self.view_add_btn("Add Processing", move |_| Msg::OnIngredientAddProcessing(idx)) }
+
+                // notes
+                {
+                    if let Some(notes) = ing.notes.as_ref() {
+                        html!{
+                            <textarea
+                                rows=2,
+                                type="text",
+                                value=notes,
+                                oninput=self.link.callback(move |e: InputData| Msg::OnIngredientNotesInputChanged(idx, e.value))
+                                />
+                        }
+                    } else {
+                        { self.view_add_btn("Add notes", move |_| Msg::OnIngredientAddNotes(idx)) }
+                    }
+                }
+
+                // Column for removing ingredients btn
                 { self.view_remove_btn("Remove Ingredient", move |_| Msg::OnRemoveIngredient(idx)) }
+            </div>
 
         </>}
     }
 
     fn view_ingredients_input(&self) -> Html {
-        match &self.state.recipe_data.ingredients {
+        let ingredients_list = match &self.state.recipe_data.ingredients {
             Some(ingredients) => {
                 let ingredients_html = html! {
                     for ingredients
@@ -797,19 +821,23 @@ impl AddRecipeComp {
                 };
 
                 let ingredients_list_html = html! {<>
-                    <h3>{"Ingredients"}</h3>
-                    { self.view_add_btn("Add Ingredient", |_| Msg::OnAddIngredient) }
-                    { ingredients_html }
+                    <div class="ui celled list">
+                        { ingredients_html }
+                    </div>
                 </>};
 
                 ingredients_list_html
             }
             None => {
-                html! {
-                    { self.view_add_btn("Add Ingredients", |_| Msg::OnAddIngredient) }
-                }
+                html! {}
             }
-        }
+        };
+
+        html! {<>
+            <h3>{"Ingredients"}</h3>
+            { self.view_add_btn("Add Ingredient", |_| Msg::OnAddIngredient) }
+            { ingredients_list }
+        </>}
     }
 
     fn view_add_btn<P: 'static>(&self, text: &str, cb: P) -> Html
